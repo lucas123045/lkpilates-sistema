@@ -471,10 +471,6 @@ const gerarPDF = async () => {
         <button className="btn btn-sec" onClick={() => corrigirAulas(aluno)}>
           Corrigir aulas
         </button>
-
-        <button className="btn btn-danger" onClick={() => apagarFicha(aluno)}>
-          Apagar ficha
-        </button>
       </div>
 
     </div>
