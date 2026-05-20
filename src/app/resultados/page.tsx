@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase"
+import ChatBot from "./ChatBot"
 import GraficoFaturamento from "./grafico"
 export default async function ResultadosPage() {
 
@@ -463,7 +464,23 @@ const rankingFaltas = alunosFiltrados
       </div>
     ))}
 </div>
-
+<ChatBot
+  insightsTexto={insights.map(i => i.titulo)}
+  topFaltas={{
+    nome: rankingFaltas[0]?.nome || "",
+    faltas: rankingFaltas[0]?.faltas || 0
+  }}
+  topPresenca={{
+    nome: rankingPresenca[0]?.nome || "",
+    presencas: rankingPresenca[0]?.presencas || 0
+  }}
+  altoRisco={
+    churnAvancado.filter(c =>
+      c.risco.includes("ALTO")
+    ).length
+  }
+  faturamento={faturamentoTotal}
+/>
     </div>
   )
 }

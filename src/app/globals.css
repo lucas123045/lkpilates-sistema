@@ -555,9 +555,3 @@ body {
 .botao-ativar {
   background: #22c55e;
 }
-.area-botoes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
-}
