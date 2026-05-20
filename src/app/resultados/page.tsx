@@ -483,4 +483,4 @@ const rankingFaltas = alunosFiltrados
 />
     </div>
   )
-}
+}//oi
