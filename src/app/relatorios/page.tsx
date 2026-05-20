@@ -17,6 +17,7 @@ type Aula = {
 type Aluno = {
   id: string
   nome: string
+  ativo: boolean
   plano: string
   total_aulas: number
   aulas_restantes: number
@@ -99,6 +100,7 @@ const gerarPDF = async () => {
       .select(`
         id,
         nome,
+        ativo,
         plano,
         total_aulas,
         aulas_restantes,
@@ -110,13 +112,14 @@ const gerarPDF = async () => {
           status
         )
       `)
-      .eq('ativo', true)
+      
       .order('nome')
 
     if (error) {
       console.error('ERRO SUPABASE:', error)
       return
     }
+    const clientesAtivos = alunos.filter(a => a.ativo)
 
     const alunosOrdenados = (data || []).map((aluno: any) => ({
       ...aluno,
@@ -371,7 +374,28 @@ const gerarPDF = async () => {
 
     await carregarAlunos()
   }
+  // 🔴 INATIVAR ALUNO (mantém dados, mas não aparece mais)
+  const inativarAluno = async (id: string) => {
+  const { error } = await supabase
+    .from("alunos")
+    .update({ ativo: false })
+    .eq("id", id);
 
+  if (!error) {
+    carregarAlunos();
+  }
+};
+// 🔴 ATIVAR ALUNO
+  const ativarAluno = async (id: string) => {
+  const { error } = await supabase
+    .from("alunos")
+    .update({ ativo: true })
+    .eq("id", id);
+
+  if (!error) {
+    carregarAlunos();
+  }
+};
   /* ---------- FILTRO ---------- */
   const filtrados = alunos.filter(a =>
     a.nome.toLowerCase().includes(busca.toLowerCase())
@@ -429,7 +453,23 @@ const gerarPDF = async () => {
         })}
       </div>
 
-      <strong>{aluno.nome}</strong>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+  <strong>{aluno.nome}</strong>
+
+  {!aluno.ativo && (
+    <span
+      style={{
+        background: '#ff4d4f',
+        color: '#fff',
+        padding: '2px 8px',
+        borderRadius: '999px',
+        fontSize: '12px'
+      }}
+    >
+      Inativado
+    </span>
+  )}
+</div>
 
       <p><b>Plano:</b> {aluno.plano}</p>
       <p><b>Aulas:</b> {aluno.aulas_restantes} / {aluno.total_aulas}</p>
@@ -468,14 +508,30 @@ const gerarPDF = async () => {
           Ver relatório completo
         </button>
 
-        <button className="btn btn-sec" onClick={() => corrigirAulas(aluno)}>
-          Corrigir aulas
-        </button>
-      </div>
+       <button className="btn btn-sec" onClick={() => corrigirAulas(aluno)}>
+  Corrigir aulas
+</button>
 
+        {!aluno.ativo ? (
+          <button
+            onClick={() => ativarAluno(aluno.id)}
+            className="botao-acao botao-ativar"
+          >
+            Ativar aluno
+          </button>
+        ) : (
+          <button
+            onClick={() => inativarAluno(aluno.id)}
+            className="botao-acao botao-inativar"
+          >
+            Inativar aluno
+          </button>
+        )}
+      </div>
     </div>
   ))}
 </div>
+
     </div>
   )
 }
