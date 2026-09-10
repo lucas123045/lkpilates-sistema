@@ -59,7 +59,7 @@ export default function Aulas() {
 
   return (
     <div className="container">
-      <h1 className="titulo">Aulas do Dia</h1>
+      <h1 className="titulo">Registro aulas</h1>
       {mensagem && <p role="status">{mensagem}</p>}
 
       <input
