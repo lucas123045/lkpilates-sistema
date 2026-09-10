@@ -1,3 +1,4 @@
+import { CheckCircle2, ShieldAlert } from 'lucide-react'
 import type { RiscoAluno } from '../lib/risco'
 import styles from '../resultados.module.css'
 
@@ -7,12 +8,16 @@ export default function RiscoCancelamento({ riscos }: { riscos: RiscoAluno[] }) 
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
-        <span className={styles.cardTitle}>🚨 Risco de cancelamento</span>
+        <span className={styles.cardTitle}>
+          <ShieldAlert size={16} strokeWidth={1.75} /> Risco de cancelamento
+        </span>
         <span className={styles.cardCaption}>Baseado em faltas, frequência e dias sem vir nos últimos 30 dias</span>
       </div>
 
       {relevantes.length === 0 ? (
-        <p className={styles.insightVazio}>Nenhum aluno ativo em risco no momento. ✅</p>
+        <p className={styles.insightVazio}>
+          <CheckCircle2 size={15} /> Nenhum aluno ativo em risco no momento.
+        </p>
       ) : (
         relevantes.map(r => (
           <div key={r.id} className={styles.riscoItem}>

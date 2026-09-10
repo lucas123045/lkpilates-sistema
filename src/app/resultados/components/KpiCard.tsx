@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react'
 import type { Variacao } from '../lib/types'
 import { formatVariacao } from '../lib/calculos'
 import styles from '../resultados.module.css'
 
 type Props = {
-  icone: string
+  icone: ReactNode
   label: string
   valor: string
   variacao?: Variacao | null

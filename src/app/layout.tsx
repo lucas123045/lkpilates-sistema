@@ -1,6 +1,6 @@
 import './globals.css'
-import Link from 'next/link'
 import type { Metadata } from 'next'
+import SiteHeader from './components/SiteHeader'
 
 /* ================== METADATA ================== */
 
@@ -23,23 +23,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        {/* HEADER */}
-        <header className="header">
-          <img src="/logo-lk-pilates.png" className="logo" alt="LK Pilates" />
-          <h1>LK Pilates – Sistema</h1>
-        </header>
+        <SiteHeader />
 
-        {/* MENU */}
-        <nav className="menu">
-          <Link href="/dashboard" className="menu-btn">Dashboard</Link>
-          <Link href="/aulas" className="menu-btn">Aulas</Link>
-          <Link href="/alunos" className="menu-btn">Cadastros</Link>
-          <Link href="/relatorios" className="menu-btn">Relatórios</Link>
-          <Link href="/resultados" className="menu-btn">Resultados</Link>
-         
-        </nav>
-
-        {/* CONTEÚDO */}
         <main className="container">
           {children}
         </main>

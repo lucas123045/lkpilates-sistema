@@ -1,6 +1,21 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import {
+  AlertOctagon,
+  BarChart3,
+  CalendarRange,
+  ChartPie,
+  CircleDollarSign,
+  LineChart as LineChartIcon,
+  Repeat2,
+  Ticket,
+  TrendingUp,
+  Trophy,
+  Users,
+  Wallet,
+  XCircle
+} from 'lucide-react'
 import ChatBot from './ChatBot'
 import Filtros, { type StatusFiltro } from './components/Filtros'
 import KpiCard from './components/KpiCard'
@@ -202,7 +217,7 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
       <div className={styles.wrap}>
         <div className={styles.header}>
           <div>
-            <h1 className={styles.title}>📊 Resultados</h1>
+            <h1 className={styles.title}>Resultados</h1>
             <p className={styles.subtitle}>Central de análise de desempenho do LK Pilates · {range.label}</p>
           </div>
         </div>
@@ -223,10 +238,12 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
 
         {/* KPIs */}
         <div className={styles.kpiGrid}>
-          {!modoAluno && <KpiCard icone="👥" label="Alunos ativos" valor={String(alunosAtivos)} caption="Alunos com status ativo" />}
+          {!modoAluno && (
+            <KpiCard icone={<Users size={17} strokeWidth={1.75} />} label="Alunos ativos" valor={String(alunosAtivos)} caption="Alunos com status ativo" />
+          )}
 
           <KpiCard
-            icone="📚"
+            icone={<BarChart3 size={17} strokeWidth={1.75} />}
             label={LABEL_STATUS[statusFiltro]}
             valor={String(contagemAtual)}
             variacao={variacaoContagem}
@@ -234,26 +251,39 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
           />
 
           <KpiCard
-            icone="📈"
+            icone={<TrendingUp size={17} strokeWidth={1.75} />}
             label="Frequência"
             valor={metricasAtual.frequencia !== null ? `${metricasAtual.frequencia.toFixed(1)}%` : '—'}
             variacao={variacaoFrequencia}
             caption="presenças / (presenças + faltas)"
           />
 
-          <KpiCard icone="❌" label="Faltas" valor={String(metricasAtual.faltas)} variacao={variacaoFaltas} invertido caption="no período selecionado" />
+          <KpiCard
+            icone={<XCircle size={17} strokeWidth={1.75} />}
+            label="Faltas"
+            valor={String(metricasAtual.faltas)}
+            variacao={variacaoFaltas}
+            invertido
+            caption="no período selecionado"
+          />
 
-          <KpiCard icone="🔁" label="Reposições" valor={String(metricasAtual.reposicoes)} variacao={variacaoReposicoes} caption="no período selecionado" />
+          <KpiCard
+            icone={<Repeat2 size={17} strokeWidth={1.75} />}
+            label="Reposições"
+            valor={String(metricasAtual.reposicoes)}
+            variacao={variacaoReposicoes}
+            caption="no período selecionado"
+          />
 
           {modoAluno ? (
             <KpiCard
-              icone="🎟️"
+              icone={<Ticket size={17} strokeWidth={1.75} />}
               label="Aulas restantes"
               valor={String(alunosSelecionados[0]?.aulas_restantes ?? 0)}
               caption={`Plano: ${alunosSelecionados[0]?.plano ?? '—'}`}
             />
           ) : (
-            <KpiCard icone="💰" label="Faturamento (MRR)" valor={formatMoney(faturamentoMRR)} caption="soma dos planos ativos" />
+            <KpiCard icone={<Wallet size={17} strokeWidth={1.75} />} label="Faturamento (MRR)" valor={formatMoney(faturamentoMRR)} caption="soma dos planos ativos" />
           )}
         </div>
 
@@ -261,7 +291,9 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
         <div className={styles.grid2}>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>📈 Evolução da frequência</span>
+              <span className={styles.cardTitle}>
+                <LineChartIcon size={16} strokeWidth={1.75} /> Evolução da frequência
+              </span>
               <span className={styles.cardCaption}>Últimos 6 meses</span>
             </div>
             <GraficoFrequencia data={serieFrequencia} />
@@ -269,7 +301,9 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
 
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>🥯 Distribuição no período</span>
+              <span className={styles.cardTitle}>
+                <ChartPie size={16} strokeWidth={1.75} /> Distribuição no período
+              </span>
             </div>
             <GraficoDistribuicao veio={distribuicaoStatus.veio} reposicao={distribuicaoStatus.reposicao} faltou={distribuicaoStatus.faltou} />
           </div>
@@ -278,7 +312,9 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
         <div className={styles.grid2}>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>📊 Aulas por status ao longo do tempo</span>
+              <span className={styles.cardTitle}>
+                <BarChart3 size={16} strokeWidth={1.75} /> Aulas por status ao longo do tempo
+              </span>
               <span className={styles.cardCaption}>Últimos 6 meses</span>
             </div>
             <GraficoAulasPorStatus data={serieFrequencia} />
@@ -286,7 +322,9 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
 
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>🗓️ Aulas por dia da semana</span>
+              <span className={styles.cardTitle}>
+                <CalendarRange size={16} strokeWidth={1.75} /> Aulas por dia da semana
+              </span>
               <span className={styles.cardCaption}>No período selecionado</span>
             </div>
             <GraficoDiaSemana data={distribuicaoSemana} />
@@ -296,7 +334,9 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
         {!modoAluno && (
           <div className={styles.card} style={{ marginBottom: 16 }}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardTitle}>💵 Recebido por mês</span>
+              <span className={styles.cardTitle}>
+                <CircleDollarSign size={16} strokeWidth={1.75} /> Recebido por mês
+              </span>
               <span className={styles.cardCaption}>Baseado na data de pagamento registrada de cada aluno</span>
             </div>
             <GraficoRecebido data={recebido.serie} comDados={recebido.comDados} />
@@ -311,9 +351,9 @@ export default function ResultadosDashboard({ alunos }: { alunos: Aluno[] }) {
         {/* RANKINGS */}
         {!modoAluno && (
           <div className={styles.grid3}>
-            <Ranking titulo="Quem paga mais" icone="💰" itens={rankingValor} />
-            <Ranking titulo="Mais frequente" icone="🏆" itens={rankingPresenca} />
-            <Ranking titulo="Quem mais falta" icone="⚠️" itens={rankingFaltas} />
+            <Ranking titulo="Quem paga mais" icone={<Wallet size={16} strokeWidth={1.75} />} itens={rankingValor} />
+            <Ranking titulo="Mais frequente" icone={<Trophy size={16} strokeWidth={1.75} />} itens={rankingPresenca} />
+            <Ranking titulo="Quem mais falta" icone={<AlertOctagon size={16} strokeWidth={1.75} />} itens={rankingFaltas} />
           </div>
         )}
 

@@ -1,13 +1,14 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { Bot, Send } from 'lucide-react'
 import { formatMoney } from './lib/calculos'
 import type { ContextoIA } from './lib/contextoIA'
 import styles from './resultados.module.css'
 
 type Mensagem = { autor: 'bot' | 'user'; texto: string }
 
-const SUGESTOES = ['💰 Faturamento', '📈 Frequência', '⚠️ Riscos', '🏆 Quem mais falta']
+const SUGESTOES = ['Faturamento', 'Frequência', 'Riscos', 'Quem mais falta']
 
 function formatPP(v: number) {
   const sinal = v > 0 ? '+' : ''
@@ -19,7 +20,7 @@ function respostaLocal(pergunta: string, ctx: ContextoIA): string | null {
   const p = pergunta.toLowerCase()
 
   if (p.includes('faturamento') || p.includes('receita')) {
-    return `💰 O faturamento recorrente estimado (planos ativos) é ${formatMoney(ctx.faturamentoMensal)}, com ${ctx.alunosAtivos} alunos ativos.`
+    return `O faturamento recorrente estimado (planos ativos) é ${formatMoney(ctx.faturamentoMensal)}, com ${ctx.alunosAtivos} alunos ativos.`
   }
 
   if (p.includes('frequ')) {
@@ -30,25 +31,25 @@ function respostaLocal(pergunta: string, ctx: ContextoIA): string | null {
       ctx.frequenciaAnterior !== null
         ? ` (${formatPP(ctx.frequencia - ctx.frequenciaAnterior)} vs. período anterior)`
         : ''
-    return `📈 A frequência em "${ctx.periodoLabel}" está em ${ctx.frequencia.toFixed(1)}%${comparativo}.`
+    return `A frequência em "${ctx.periodoLabel}" está em ${ctx.frequencia.toFixed(1)}%${comparativo}.`
   }
 
   if (p.includes('mais falta')) {
     if (!ctx.topFaltas) return 'Não há faltas registradas nesse período.'
-    return `⚠️ ${ctx.topFaltas.nome} é quem mais faltou no período (${ctx.topFaltas.faltas} faltas).`
+    return `${ctx.topFaltas.nome} é quem mais faltou no período (${ctx.topFaltas.faltas} faltas).`
   }
 
   if (p.includes('mais vai') || p.includes('mais frequente') || p.includes('mais presen')) {
     if (!ctx.topPresenca) return 'Não há presenças registradas nesse período.'
-    return `🏆 ${ctx.topPresenca.nome} é o aluno mais frequente do período, com ${ctx.topPresenca.presencas} presenças.`
+    return `${ctx.topPresenca.nome} é o aluno mais frequente do período, com ${ctx.topPresenca.presencas} presenças.`
   }
 
   if (p.includes('risco')) {
-    if (ctx.altoRisco === 0 && ctx.medioRisco === 0) return '✅ Nenhum aluno em risco de cancelamento no momento.'
+    if (ctx.altoRisco === 0 && ctx.medioRisco === 0) return 'Nenhum aluno em risco de cancelamento no momento.'
     const partes: string[] = []
     if (ctx.altoRisco > 0) partes.push(`${ctx.altoRisco} em risco alto`)
     if (ctx.medioRisco > 0) partes.push(`${ctx.medioRisco} em risco médio`)
-    return `🚨 Atualmente há ${partes.join(' e ')}. Veja a lista de risco na página para os motivos.`
+    return `Atualmente há ${partes.join(' e ')}. Veja a lista de risco na página para os motivos.`
   }
 
   return null
@@ -58,7 +59,7 @@ export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([
     {
       autor: 'bot',
-      texto: 'Olá 👋 Sou a IA da LK Pilates. Pergunte sobre frequência, faturamento, riscos ou os alunos deste período.'
+      texto: 'Olá! Sou a IA da LK Pilates. Pergunte sobre frequência, faturamento, riscos ou os alunos deste período.'
     }
   ])
   const [input, setInput] = useState('')
@@ -83,7 +84,7 @@ export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
     }
 
     setCarregando(true)
-    setMensagens(prev => [...prev, { autor: 'bot', texto: '🤖 Analisando os dados...' }])
+    setMensagens(prev => [...prev, { autor: 'bot', texto: 'Analisando os dados...' }])
 
     try {
       const response = await fetch('/api/chat', {
@@ -102,7 +103,7 @@ export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
             texto:
               response.status === 503
                 ? 'A IA por linguagem natural não está configurada, mas posso responder perguntas diretas sobre faturamento, frequência e riscos.'
-                : '❌ Não consegui falar com a IA agora. Tente novamente em instantes.'
+                : 'Não consegui falar com a IA agora. Tente novamente em instantes.'
           }
         } else {
           novas[novas.length - 1] = { autor: 'bot', texto: data.resposta }
@@ -112,7 +113,7 @@ export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
     } catch {
       setMensagens(prev => {
         const novas = [...prev]
-        novas[novas.length - 1] = { autor: 'bot', texto: '❌ Falha de conexão com a IA.' }
+        novas[novas.length - 1] = { autor: 'bot', texto: 'Falha de conexão com a IA.' }
         return novas
       })
     } finally {
@@ -123,7 +124,9 @@ export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
   return (
     <div className={`${styles.card} ${styles.chatCard}`}>
       <div className={styles.cardHeader}>
-        <span className={styles.cardTitle}>🤖 LK IA Assistant</span>
+        <span className={styles.cardTitle}>
+          <Bot size={16} strokeWidth={1.75} /> LK IA Assistant
+        </span>
         <span className={styles.cardCaption}>Respostas baseadas nos dados de &quot;{contexto.periodoLabel}&quot;</span>
       </div>
 
@@ -153,7 +156,7 @@ export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
           disabled={carregando}
         />
         <button className={styles.chatBtn} onClick={() => enviarMensagem()} disabled={carregando}>
-          Enviar
+          <Send size={15} strokeWidth={2} />
         </button>
       </div>
     </div>

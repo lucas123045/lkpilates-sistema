@@ -45,62 +45,68 @@ export default function Filtros({
 }: Props) {
   return (
     <div className={styles.filtros}>
-      <span className={styles.filtroLabel}>Período</span>
-      <div className={styles.filtroGrupo}>
-        {PRESETS.map(p => (
-          <button
-            key={p.valor}
-            className={`${styles.chip} ${periodo === p.valor ? styles.chipAtivo : ''}`}
-            onClick={() => onPeriodoChange(p.valor)}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className={styles.filtroItem}>
+        <span className={styles.filtroLabel}>Período</span>
+        <div className={styles.filtroGrupo}>
+          {PRESETS.map(p => (
+            <button
+              key={p.valor}
+              className={`${styles.chip} ${periodo === p.valor ? styles.chipAtivo : ''}`}
+              onClick={() => onPeriodoChange(p.valor)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {periodo === 'personalizado' && (
+          <>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={customInicio}
+              onChange={e => onCustomInicioChange(e.target.value)}
+            />
+            <span style={{ color: '#98a2b3' }}>até</span>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={customFim}
+              onChange={e => onCustomFimChange(e.target.value)}
+            />
+          </>
+        )}
       </div>
 
-      {periodo === 'personalizado' && (
-        <>
-          <input
-            type="date"
-            className={styles.dateInput}
-            value={customInicio}
-            onChange={e => onCustomInicioChange(e.target.value)}
-          />
-          <span style={{ color: '#98a2b3' }}>até</span>
-          <input
-            type="date"
-            className={styles.dateInput}
-            value={customFim}
-            onChange={e => onCustomFimChange(e.target.value)}
-          />
-        </>
-      )}
+      <div className={styles.divider} />
+
+      <div className={styles.filtroItem}>
+        <span className={styles.filtroLabel}>Aluno</span>
+        <select className={styles.select} value={alunoId} onChange={e => onAlunoChange(e.target.value)}>
+          <option value="todos">Todos os alunos</option>
+          {alunos.map(a => (
+            <option key={a.id} value={a.id}>
+              {a.nome}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className={styles.divider} />
 
-      <span className={styles.filtroLabel}>Aluno</span>
-      <select className={styles.select} value={alunoId} onChange={e => onAlunoChange(e.target.value)}>
-        <option value="todos">Todos os alunos</option>
-        {alunos.map(a => (
-          <option key={a.id} value={a.id}>
-            {a.nome}
-          </option>
-        ))}
-      </select>
-
-      <div className={styles.divider} />
-
-      <span className={styles.filtroLabel}>Status</span>
-      <select
-        className={styles.select}
-        value={statusFiltro}
-        onChange={e => onStatusChange(e.target.value as StatusFiltro)}
-      >
-        <option value="todos">Todos</option>
-        <option value="veio">Presenças</option>
-        <option value="faltou">Faltas</option>
-        <option value="reposicao">Reposições</option>
-      </select>
+      <div className={styles.filtroItem}>
+        <span className={styles.filtroLabel}>Status</span>
+        <select
+          className={styles.select}
+          value={statusFiltro}
+          onChange={e => onStatusChange(e.target.value as StatusFiltro)}
+        >
+          <option value="todos">Todos</option>
+          <option value="veio">Presenças</option>
+          <option value="faltou">Faltas</option>
+          <option value="reposicao">Reposições</option>
+        </select>
+      </div>
     </div>
   )
 }

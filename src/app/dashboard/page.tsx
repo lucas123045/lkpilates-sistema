@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { CalendarCheck, ClipboardList, UsersRound } from 'lucide-react'
 
 export default function Dashboard() {
   return (
@@ -24,17 +25,17 @@ export default function Dashboard() {
       {/* BOTÕES */}
       <div className="dashboard-actions">
         <Link href="/alunos" className="dashboard-card">
-          👤
+          <UsersRound size={26} strokeWidth={1.75} />
           <span>Cadastro de Alunos</span>
         </Link>
 
         <Link href="/aulas" className="dashboard-card">
-          📆
+          <CalendarCheck size={26} strokeWidth={1.75} />
           <span>Registro de Aulas</span>
         </Link>
 
         <Link href="/relatorios" className="dashboard-card">
-          📊
+          <ClipboardList size={26} strokeWidth={1.75} />
           <span>Relatórios</span>
         </Link>
       </div>

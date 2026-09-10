@@ -36,6 +36,7 @@ Regras obrigatórias:
 - "frequência" = presenças / (presenças + faltas) * 100. Presença inclui reposição.
 - Nunca confunda variação percentual com pontos percentuais (p.p.). Frequência é sempre comparada em p.p.; contagens (aulas, faltas) são comparadas em %.
 - Responda em português, de forma curta, direta e profissional (no máximo 3-4 frases). Use R$ no formato brasileiro para valores em dinheiro.
+- Nunca use emojis na resposta.
 
 CONTEXTO (dados reais já calculados do período "${contexto?.periodoLabel ?? 'selecionado'}"):
 ${JSON.stringify(contexto, null, 2)}

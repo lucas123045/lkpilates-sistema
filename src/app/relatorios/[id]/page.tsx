@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 
@@ -76,7 +77,7 @@ export default function RelatorioCompleto() {
   return (
     <div className="container">
       <button className="btn btn-sec" onClick={() => router.back()}>
-        ← Voltar
+        <ArrowLeft size={15} /> Voltar
       </button>
 
       <h1 style={{ marginTop: 20 }}>Relatório Completo</h1>

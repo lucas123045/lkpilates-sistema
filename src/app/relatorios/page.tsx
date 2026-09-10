@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { desfazerAula, registrarAula as registrarAulaNoBanco, dataLocalISO } from '@/lib/aulas'
 import { useRouter } from 'next/navigation'
@@ -251,7 +252,7 @@ const gerarPDF = async () => {
 
     const alunosOrdenados = (data || []).map((aluno: any) => ({
       ...aluno,
-      data_reinicio: aluno.data_reinicio || null, // 🔥 não quebra se não existir
+      data_reinicio: aluno.data_reinicio || null, // não quebra se não existir
       aulas: [...(aluno.aulas || [])].filter(aula => !aula.deleted_at).sort(
         (a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()
       )
@@ -330,7 +331,7 @@ const gerarPDF = async () => {
     .toISOString()
     .slice(0, 10)
 
-  // 🔴 1. cria registro de reinício
+  // 1. cria registro de reinício
   try {
     await registrarAulaNoBanco(aluno.id, 'reinicio', dataLocal)
   } catch (error) {
@@ -339,7 +340,7 @@ const gerarPDF = async () => {
     return
   }
 
-  // 🔴 2. reseta aulas
+  // 2. reseta aulas
   const { error: erroPlano } = await supabase
     .from('alunos')
     .update({
@@ -462,7 +463,7 @@ const gerarPDF = async () => {
 
     await carregarAlunos()
   }
-  // 🔴 INATIVAR ALUNO (mantém dados, mas não aparece mais)
+  // INATIVAR ALUNO (mantém dados, mas não aparece mais)
   const inativarAluno = async (id: string) => {
   const { error } = await supabase
     .from("alunos")
@@ -473,7 +474,7 @@ const gerarPDF = async () => {
     carregarAlunos();
   }
 };
-// 🔴 ATIVAR ALUNO
+// ATIVAR ALUNO
   const ativarAluno = async (id: string) => {
   const { error } = await supabase
     .from("alunos")
@@ -518,7 +519,8 @@ const gerarPDF = async () => {
   style={{ marginBottom: 20, marginLeft: 8 }}
   title={mostrarDatas ? 'Ocultar datas das aulas' : 'Mostrar datas das aulas'}
 >
-  {mostrarDatas ? '👁️ Ocultar datas' : '🙈 Mostrar datas'}
+  {mostrarDatas ? <Eye size={15} /> : <EyeOff size={15} />}
+  {mostrarDatas ? 'Ocultar datas' : 'Mostrar datas'}
 </button>
       <input
         className="search"
@@ -581,7 +583,8 @@ const gerarPDF = async () => {
     style={{ padding: '4px 10px', fontSize: 12, marginLeft: 'auto' }}
     title={datasVisiveis(aluno.id) ? 'Ocultar datas deste aluno' : 'Mostrar datas deste aluno'}
   >
-    {datasVisiveis(aluno.id) ? '👁️ Ocultar datas' : '🙈 Mostrar datas'}
+    {datasVisiveis(aluno.id) ? <Eye size={13} /> : <EyeOff size={13} />}
+    {datasVisiveis(aluno.id) ? 'Ocultar datas' : 'Mostrar datas'}
   </button>
 </div>
 

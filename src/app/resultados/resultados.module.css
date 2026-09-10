@@ -46,6 +46,13 @@
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
+.filtroItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .filtroGrupo {
   display: flex;
   gap: 6px;
@@ -145,7 +152,10 @@
 }
 
 .kpiIcon {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #98a2b3;
 }
 
 .kpiValor {
@@ -289,7 +299,26 @@
   background: #fff8f0;
 }
 
+.insightCard.atencao .insightTitulo {
+  color: #c0392b;
+}
+
+.insightCard.tendencia .insightTitulo {
+  color: #1a8a4c;
+}
+
+.insightCard.desempenho .insightTitulo {
+  color: #1f4fd8;
+}
+
+.insightCard.oportunidade .insightTitulo {
+  color: #c2650a;
+}
+
 .insightTitulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-weight: 700;
   font-size: 13.5px;
   color: #101828;
@@ -303,6 +332,9 @@
 }
 
 .insightVazio {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   color: #667085;
   font-size: 13.5px;
 }
@@ -486,7 +518,11 @@
 }
 
 .chatBtn {
-  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  flex-shrink: 0;
   border-radius: 12px;
   border: none;
   background: #1f4fd8;

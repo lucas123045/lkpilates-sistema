@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Check, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { dataLocalISO, registrarAula, type StatusAula } from '@/lib/aulas'
 
@@ -91,7 +92,7 @@ export default function Aulas() {
                 disabled={salvando === aluno.id}
                 onClick={() => marcarPresenca(aluno.id, 'veio')}
               >
-                ✅ Veio
+                <Check size={15} strokeWidth={2.5} /> Veio
               </button>
 
               <button
@@ -99,7 +100,7 @@ export default function Aulas() {
                 disabled={salvando === aluno.id}
                 onClick={() => marcarPresenca(aluno.id, 'faltou')}
               >
-                ❌ Faltou
+                <X size={15} strokeWidth={2.5} /> Faltou
               </button>
             </div>
           </div>

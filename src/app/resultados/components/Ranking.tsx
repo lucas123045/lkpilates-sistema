@@ -1,13 +1,14 @@
+import type { ReactNode } from 'react'
 import styles from '../resultados.module.css'
 
 type Item = { nome: string; valor: string }
 
-export default function Ranking({ titulo, icone, itens }: { titulo: string; icone: string; itens: Item[] }) {
+export default function Ranking({ titulo, icone, itens }: { titulo: string; icone: ReactNode; itens: Item[] }) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
         <span className={styles.cardTitle}>
-          <span>{icone}</span> {titulo}
+          {icone} {titulo}
         </span>
       </div>
 
