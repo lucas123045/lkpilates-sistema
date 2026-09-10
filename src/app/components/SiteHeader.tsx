@@ -15,6 +15,8 @@ const LINKS = [
 export default function SiteHeader() {
   const pathname = usePathname()
 
+  if (pathname === '/') return null
+
   return (
     <header className="site-header">
       <Link href="/dashboard" className="brand">
