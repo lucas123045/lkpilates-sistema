@@ -7,7 +7,10 @@ import { useParams, useRouter } from 'next/navigation'
 type Aula = {
   id: number
   data: string
-  status: 'veio' | 'faltou'
+  status: 'veio' | 'faltou' | 'reposicao' | 'reinicio'
+  tipo?: string
+  observacao?: string | null
+  deleted_at?: string | null
 }
 
 type Aluno = {
@@ -46,15 +49,18 @@ export default function RelatorioCompleto() {
         aulas (
           id,
           data,
-          status
+          status,
+          tipo,
+          observacao,
+          deleted_at
         )
       `)
       .eq('id', id)
       .single()
 
     if (!error && data) {
-      const aulasOrdenadas = [...(data.aulas || [])].sort(
-        (a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()
+      const aulasOrdenadas = [...(data.aulas || [])].filter(aula => !aula.deleted_at).sort(
+        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
       )
 
       setAluno({ ...data, aulas: aulasOrdenadas })
@@ -127,7 +133,7 @@ export default function RelatorioCompleto() {
           : '#000'
     }}
     >
-      {formatarDataBR(aula.data)}
+      {formatarDataBR(aula.data)} - {aula.status === 'veio' ? 'Presente' : aula.status === 'faltou' ? 'Falta' : aula.status === 'reposicao' ? 'Reposição' : 'Reinício'}
     </span>
   ))}
 </div>

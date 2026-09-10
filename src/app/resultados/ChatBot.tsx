@@ -1,320 +1,161 @@
-"use client"
+'use client'
 
-import { useState } from "react"
+import { useRef, useState, useEffect } from 'react'
+import { formatMoney } from './lib/calculos'
+import type { ContextoIA } from './lib/contextoIA'
+import styles from './resultados.module.css'
 
-type Props = {
-  insightsTexto: string[]
+type Mensagem = { autor: 'bot' | 'user'; texto: string }
 
-  topFaltas: {
-    nome: string
-    faltas: number
-  }
+const SUGESTOES = ['💰 Faturamento', '📈 Frequência', '⚠️ Riscos', '🏆 Quem mais falta']
 
-  topPresenca: {
-    nome: string
-    presencas: number
-  }
-
-  altoRisco: number
-
-  faturamento: number
+function formatPP(v: number) {
+  const sinal = v > 0 ? '+' : ''
+  return `${sinal}${v.toFixed(1)} p.p.`
 }
 
-export default function ChatBot({
-  insightsTexto,
-topFaltas,
-topPresenca,
-altoRisco,
-faturamento
-}: Props) {
-
-    const [contexto, setContexto] = useState<any>(null)
-  const [mensagens, setMensagens] = useState([
-    {
-      autor: "bot",
-      texto: "Olá 👋 Sou a IA da LK Pilates. Pergunte algo sobre os alunos, faturamento ou riscos."
-    }
-  ])
-
-  const [input, setInput] = useState("")
-
-  function responder(pergunta: string) {
-
+/** Respostas instantâneas para perguntas comuns, sem depender da API (mais rápido e sem custo). */
+function respostaLocal(pergunta: string, ctx: ContextoIA): string | null {
   const p = pergunta.toLowerCase()
 
-  // 💰 faturamento
-  if (p.includes("faturamento")) {
-
-    return `💰 O estúdio faturou ${faturamento.toLocaleString(
-      "pt-BR",
-      {
-        style: "currency",
-        currency: "BRL"
-      }
-    )} nos últimos 30 dias.`
+  if (p.includes('faturamento') || p.includes('receita')) {
+    return `💰 O faturamento recorrente estimado (planos ativos) é ${formatMoney(ctx.faturamentoMensal)}, com ${ctx.alunosAtivos} alunos ativos.`
   }
 
-  // 🧠 contexto da conversa
-  if (
-    contexto?.tipo === "faltas" &&
-    (
-      p.includes("risco") ||
-      p.includes("ela") ||
-      p.includes("ele")
-    )
-  ) {
-
-    if (altoRisco > 0) {
-      return `🚨 Sim, ${contexto.aluno} está sendo monitorado por risco de cancelamento.`
+  if (p.includes('frequ')) {
+    if (ctx.frequencia === null) {
+      return `Não há dados suficientes para calcular a frequência em "${ctx.periodoLabel}".`
     }
-
-    return `✅ ${contexto.aluno} não apresenta risco elevado atualmente.`
+    const comparativo =
+      ctx.frequenciaAnterior !== null
+        ? ` (${formatPP(ctx.frequencia - ctx.frequenciaAnterior)} vs. período anterior)`
+        : ''
+    return `📈 A frequência em "${ctx.periodoLabel}" está em ${ctx.frequencia.toFixed(1)}%${comparativo}.`
   }
 
-  // ⚠️ quem mais falta
-  if (p.includes("mais falta")) {
-
-    setContexto({
-      tipo: "faltas",
-      aluno: topFaltas.nome
-    })
-
-    return `⚠️ ${topFaltas.nome} é quem mais faltou recentemente (${topFaltas.faltas} faltas).`
+  if (p.includes('mais falta')) {
+    if (!ctx.topFaltas) return 'Não há faltas registradas nesse período.'
+    return `⚠️ ${ctx.topFaltas.nome} é quem mais faltou no período (${ctx.topFaltas.faltas} faltas).`
   }
 
-  // 🏆 quem mais vai
-  if (
-    p.includes("mais vai") ||
-    p.includes("mais frequente")
-  ) {
-
-    return `🏆 ${topPresenca.nome} é atualmente o aluno mais frequente, com ${topPresenca.presencas} presenças no período analisado.`
+  if (p.includes('mais vai') || p.includes('mais frequente') || p.includes('mais presen')) {
+    if (!ctx.topPresenca) return 'Não há presenças registradas nesse período.'
+    return `🏆 ${ctx.topPresenca.nome} é o aluno mais frequente do período, com ${ctx.topPresenca.presencas} presenças.`
   }
 
-  // 🚨 risco
-  if (p.includes("risco")) {
-
-    if (altoRisco === 0) {
-      return "✅ Nenhum aluno está em alto risco atualmente."
-    }
-
-    return `🚨 Atualmente existem ${altoRisco} alunos classificados em alto risco de cancelamento.`
+  if (p.includes('risco')) {
+    if (ctx.altoRisco === 0 && ctx.medioRisco === 0) return '✅ Nenhum aluno em risco de cancelamento no momento.'
+    const partes: string[] = []
+    if (ctx.altoRisco > 0) partes.push(`${ctx.altoRisco} em risco alto`)
+    if (ctx.medioRisco > 0) partes.push(`${ctx.medioRisco} em risco médio`)
+    return `🚨 Atualmente há ${partes.join(' e ')}. Veja a lista de risco na página para os motivos.`
   }
 
-  // 📉 insights
-  if (p.includes("insight")) {
-
-    return `
-📉 Insights atuais do sistema:
-
-${insightsTexto.map(i => `• ${i}`).join("\n")}
-`
-  }
-
-  // fallback
-  return "🤖 Ainda não sei responder isso, mas estou aprendendo 👀"
+  return null
 }
 
-  async function enviarMensagem() {
-
-  if (!input.trim()) return
-
-  const pergunta = input
-
-  setMensagens(prev => [
-    ...prev,
+export default function ChatBot({ contexto }: { contexto: ContextoIA }) {
+  const [mensagens, setMensagens] = useState<Mensagem[]>([
     {
-      autor: "user",
-      texto: pergunta
+      autor: 'bot',
+      texto: 'Olá 👋 Sou a IA da LK Pilates. Pergunte sobre frequência, faturamento, riscos ou os alunos deste período.'
     }
   ])
+  const [input, setInput] = useState('')
+  const [carregando, setCarregando] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  setInput("")
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+  }, [mensagens])
 
-  // loading
-  setMensagens(prev => [
-    ...prev,
-    {
-      autor: "bot",
-      texto: "🤖 Pensando..."
-    }
-  ])
+  async function enviarMensagem(textoForcado?: string) {
+    const pergunta = (textoForcado ?? input).trim()
+    if (!pergunta || carregando) return
 
-  const response = await fetch("/api/chat", {
-    method: "POST",
+    setMensagens(prev => [...prev, { autor: 'user', texto: pergunta }])
+    setInput('')
 
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify({
-      pergunta,
-
-      contexto: {
-        faturamento,
-        insightsTexto,
-        topFaltas,
-        topPresenca,
-        altoRisco
-      }
-    })
-  })
-
-const data = await response.json()
-
-if (!response.ok) {
-
-  console.error(data)
-
-  setMensagens(prev => {
-    const novas = [...prev]
-
-    novas[novas.length - 1] = {
-      autor: "bot",
-      texto: "❌ Erro ao falar com a IA."
+    const local = respostaLocal(pergunta, contexto)
+    if (local) {
+      setMensagens(prev => [...prev, { autor: 'bot', texto: local }])
+      return
     }
 
-    return novas
-  })
+    setCarregando(true)
+    setMensagens(prev => [...prev, { autor: 'bot', texto: '🤖 Analisando os dados...' }])
 
-  return
-}
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pergunta, contexto })
+      })
 
-  setMensagens(prev => {
-    const novas = [...prev]
+      const data = await response.json()
 
-    novas[novas.length - 1] = {
-      autor: "bot",
-      texto: data.resposta
+      setMensagens(prev => {
+        const novas = [...prev]
+        if (!response.ok) {
+          novas[novas.length - 1] = {
+            autor: 'bot',
+            texto:
+              response.status === 503
+                ? 'A IA por linguagem natural não está configurada, mas posso responder perguntas diretas sobre faturamento, frequência e riscos.'
+                : '❌ Não consegui falar com a IA agora. Tente novamente em instantes.'
+          }
+        } else {
+          novas[novas.length - 1] = { autor: 'bot', texto: data.resposta }
+        }
+        return novas
+      })
+    } catch {
+      setMensagens(prev => {
+        const novas = [...prev]
+        novas[novas.length - 1] = { autor: 'bot', texto: '❌ Falha de conexão com a IA.' }
+        return novas
+      })
+    } finally {
+      setCarregando(false)
     }
-
-    return novas
-  })
-}
+  }
 
   return (
-    <div style={{
-      marginTop: 40,
-      background: "#fff",
-      borderRadius: 16,
-      padding: 20,
-      boxShadow: "0 2px 10px rgba(0,0,0,0.08)"
-    }}>
-
-      <h2>🤖 LK IA Assistant</h2>
-
-      <div style={{
-        height: 350,
-        overflowY: "auto",
-        marginTop: 20,
-        marginBottom: 20,
-        padding: 10,
-        background: "#f7f7f7",
-        borderRadius: 12
-      }}>
-
-        {mensagens.map((m, i) => (
-
-          <div
-            key={i}
-            style={{
-              marginBottom: 14,
-              textAlign:
-                m.autor === "user"
-                  ? "right"
-                  : "left"
-            }}
-          >
-
-            <div style={{
-              display: "inline-block",
-              padding: "10px 14px",
-              borderRadius: 12,
-              background:
-                m.autor === "user"
-                  ? "#2563eb"
-                  : "#e5e7eb",
-              color:
-                m.autor === "user"
-                  ? "#fff"
-                  : "#111"
-            }}>
-              {m.texto}
-            </div>
-
-          </div>
-
-        ))}
-
+    <div className={`${styles.card} ${styles.chatCard}`}>
+      <div className={styles.cardHeader}>
+        <span className={styles.cardTitle}>🤖 LK IA Assistant</span>
+        <span className={styles.cardCaption}>Respostas baseadas nos dados de &quot;{contexto.periodoLabel}&quot;</span>
       </div>
-        <div
-  style={{
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    marginBottom: 15
-  }}
->
 
-  {[
-    "💰 Faturamento",
-    "⚠️ Riscos",
-    "🏆 Mais frequente",
-    "📉 Insights"
-  ].map((texto, i) => (
+      <div className={styles.chatMensagens} ref={scrollRef}>
+        {mensagens.map((m, i) => (
+          <div key={i} className={`${styles.bolha} ${m.autor === 'user' ? styles.bolhaUser : styles.bolhaBot}`}>
+            {m.texto}
+          </div>
+        ))}
+      </div>
 
-    <button
-      key={i}
-      onClick={() => {
-        setInput(texto)
-      }}
-      style={{
-        border: "none",
-        padding: "8px 12px",
-        borderRadius: 999,
-        background: "#e5e7eb",
-        cursor: "pointer"
-      }}
-    >
-      {texto}
-    </button>
+      <div className={styles.sugestoes}>
+        {SUGESTOES.map(s => (
+          <button key={s} className={styles.chip} onClick={() => enviarMensagem(s)} disabled={carregando}>
+            {s}
+          </button>
+        ))}
+      </div>
 
-  ))}
-
-</div>
-      <div style={{
-        display: "flex",
-        gap: 10
-      }}>
-
+      <div className={styles.chatInputRow}>
         <input
+          className={styles.chatInput}
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Pergunte algo..."
-          style={{
-            flex: 1,
-            padding: 14,
-            borderRadius: 10,
-            border: "1px solid #ddd"
-          }}
+          onKeyDown={e => e.key === 'Enter' && enviarMensagem()}
+          placeholder="Pergunte algo sobre os resultados..."
+          disabled={carregando}
         />
-
-        <button
-          onClick={enviarMensagem}
-          style={{
-            padding: "0 20px",
-            borderRadius: 10,
-            border: "none",
-            background: "#2563eb",
-            color: "#fff",
-            cursor: "pointer"
-          }}
-        >
+        <button className={styles.chatBtn} onClick={() => enviarMensagem()} disabled={carregando}>
           Enviar
         </button>
-
       </div>
-
     </div>
   )
 }

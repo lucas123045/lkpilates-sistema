@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { dataLocalISO, registrarAula, type StatusAula } from '@/lib/aulas'
 
 type Aluno = {
   id: string
@@ -13,6 +14,8 @@ type Aluno = {
 export default function Aulas() {
   const [busca, setBusca] = useState('')
   const [alunos, setAlunos] = useState<Aluno[]>([])
+  const [salvando, setSalvando] = useState<string | null>(null)
+  const [mensagem, setMensagem] = useState('')
 
   const alunosFiltrados = alunos.filter(aluno =>
     aluno.nome.toLowerCase().includes(busca.toLowerCase())
@@ -37,32 +40,26 @@ export default function Aulas() {
     setAlunos(data || [])
   }
 
-  async function marcarPresenca(alunoId: string, status: 'veio' | 'faltou') {
-    const hoje = new Date().toISOString().split('T')[0]
+  async function marcarPresenca(alunoId: string, status: StatusAula) {
+    if (salvando) return
+    setSalvando(alunoId)
+    setMensagem('')
 
-    const { error } = await supabase.from('aulas').insert({
-      aluno_id: alunoId,
-      data: hoje,
-      status
-    })
-
-    if (error) {
-      alert(error.message)
-      return
+    try {
+      await registrarAula(alunoId, status, dataLocalISO())
+      setMensagem('Aula registrada com sucesso.')
+      await carregarAlunos()
+    } catch (error) {
+      setMensagem(error instanceof Error ? error.message : 'Nao foi possivel salvar a aula.')
+    } finally {
+      setSalvando(null)
     }
-
-    if (status === 'veio') {
-      await supabase.rpc('descontar_aula', {
-        aluno_id_input: alunoId
-      })
-    }
-
-    carregarAlunos()
   }
 
   return (
     <div className="container">
       <h1 className="titulo">Aulas do Dia</h1>
+      {mensagem && <p role="status">{mensagem}</p>}
 
       <input
         className="search"
@@ -91,6 +88,7 @@ export default function Aulas() {
             <div className="botoes">
               <button
                 className="btn btn-veio"
+                disabled={salvando === aluno.id}
                 onClick={() => marcarPresenca(aluno.id, 'veio')}
               >
                 ✅ Veio
@@ -98,6 +96,7 @@ export default function Aulas() {
 
               <button
                 className="btn btn-faltou"
+                disabled={salvando === aluno.id}
                 onClick={() => marcarPresenca(aluno.id, 'faltou')}
               >
                 ❌ Faltou
