@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarCheck, ClipboardList, LayoutGrid, LineChart, UsersRound } from 'lucide-react'
+import { CalendarCheck, CalendarDays, ClipboardList, LayoutGrid, LineChart, UsersRound } from 'lucide-react'
 
 const LINKS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
+  { href: '/agenda', label: 'Agenda', icon: CalendarDays },
   { href: '/aulas', label: 'Aulas', icon: CalendarCheck },
   { href: '/alunos', label: 'Cadastros', icon: UsersRound },
   { href: '/relatorios', label: 'Relatórios', icon: ClipboardList },

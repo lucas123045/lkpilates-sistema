@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import SiteHeader from './components/SiteHeader'
+import { FeedbackProvider } from './components/ui/Feedback'
 
 /* ================== METADATA ================== */
 
@@ -23,11 +24,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <SiteHeader />
+        <FeedbackProvider>
+          <SiteHeader />
 
-        <main className="container">
-          {children}
-        </main>
+          <main className="container">
+            {children}
+          </main>
+        </FeedbackProvider>
       </body>
     </html>
   )

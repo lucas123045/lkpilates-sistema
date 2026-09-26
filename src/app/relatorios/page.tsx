@@ -632,6 +632,13 @@ const gerarPDF = async () => {
           PDF aluno
         </button>
 
+        <button
+          className="btn btn-sec"
+          onClick={() => router.push(`/alunos/${aluno.id}`)}
+        >
+          Horários e agenda
+        </button>
+
        <button className="btn btn-sec" onClick={() => corrigirAulas(aluno)}>
   Corrigir aulas
 </button>
