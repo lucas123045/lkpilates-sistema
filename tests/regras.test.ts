@@ -22,6 +22,7 @@ import {
   ocupacao,
   professorEfetivo,
   resumoDoDia,
+  sugerirDiasFixos,
   situacaoCredito,
   verificarCapacidade
 } from '@/lib/agenda/regras'
@@ -165,6 +166,8 @@ describe('plano e resumo', () => {
     expect(frequenciaDoPlano('semestral 2x')).toBe(2)
     expect(frequenciaDoPlano('3 x por semana')).toBe(3)
     expect(frequenciaDoPlano('mensal')).toBeNull()
+    expect(frequenciaDoPlano('pago fev a julho 6x411')).toBeNull()
+    expect(frequenciaDoPlano('mensal 2x 474')).toBe(2)
     expect(excedePlano(2, 3)).toBe(true)
     expect(excedePlano(null, 5)).toBe(false)
   })
@@ -188,5 +191,25 @@ describe('plano e resumo', () => {
       experimentais: 1,
       vagasLivres: 2
     })
+  })
+})
+
+describe('sugestao de dias fixos pelo historico', () => {
+  it('pega os dias recorrentes e ignora aulas esporadicas e antigas', () => {
+    const datas = [
+      // terca e quinta nas ultimas 6 semanas (29/09/2026 = terca)
+      '2026-08-25', '2026-08-27', '2026-09-01', '2026-09-03', '2026-09-08', '2026-09-10',
+      '2026-09-15', '2026-09-17', '2026-09-22', '2026-09-24',
+      '2026-09-12', // um sabado de reposicao
+      '2026-03-02', '2026-03-09', '2026-03-16' // segundas antigas
+    ]
+    expect(sugerirDiasFixos(datas, '2026-09-26')).toEqual([
+      { dia: 2, vezes: 5, semanas: 5 },
+      { dia: 4, vezes: 5, semanas: 5 }
+    ])
+  })
+
+  it('sem historico recente nao sugere nada', () => {
+    expect(sugerirDiasFixos(['2025-01-07'], '2026-09-26')).toEqual([])
   })
 })

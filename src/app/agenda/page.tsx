@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { AlertTriangle, Ban, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, Settings } from 'lucide-react'
+import { AlertTriangle, Ban, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, Settings, UsersRound } from 'lucide-react'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import {
   formatarData,
@@ -188,6 +188,9 @@ function Agenda() {
           <button className="btn btn-sec" onClick={() => setBloqueioAberto(true)}>
             <Ban size={15} /> Feriado / bloqueio
           </button>
+          <Link href="/agenda/horarios-fixos" className="btn btn-sec" style={{ textDecoration: 'none' }}>
+            <UsersRound size={15} /> Horários fixos
+          </Link>
           <Link href="/agenda/configuracoes" className="btn btn-sec" style={{ textDecoration: 'none' }}>
             <Settings size={15} /> Grade e professores
           </Link>
@@ -273,9 +276,15 @@ function Agenda() {
         <div className="ui-estado">
           <CalendarDays size={32} />
           <p>Nenhuma turma cadastrada ainda.</p>
-          <Link href="/agenda/configuracoes" className="btn ui-btn-azul" style={{ marginTop: 12, textDecoration: 'none' }}>
-            Montar a grade de horários
-          </Link>
+          <p style={{ fontSize: 13.5 }}>1. Cadastre as turmas e professores · 2. Ligue cada aluno aos seus horários fixos.</p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+            <Link href="/agenda/configuracoes" className="btn ui-btn-azul" style={{ textDecoration: 'none' }}>
+              1. Montar a grade de horários
+            </Link>
+            <Link href="/agenda/horarios-fixos" className="btn btn-sec" style={{ textDecoration: 'none' }}>
+              2. Horários fixos dos alunos
+            </Link>
+          </div>
         </div>
       )}
 

@@ -2,7 +2,7 @@
 // supabase/migrations/202609260002_agenda_funcoes.sql e servem para a tela
 // mostrar previas (ex.: "vai gerar credito?") antes de chamar o banco.
 
-import { agoraEstudioMs, diferencaDias, momentoMs, sobrepoe } from './datas'
+import { agoraEstudioMs, diaSemanaISO, diferencaDias, inicioSemana as inicioSemanaISO, momentoMs, sobrepoe, somarDias as somarDiasISO } from './datas'
 import type {
   Agendamento,
   Bloqueio,
@@ -182,7 +182,7 @@ export function conflitosDeProfessor(
 
 /** "semestral 2x" -> 2; null se nao identificar. */
 export function frequenciaDoPlano(plano: string | null | undefined) {
-  const m = (plano ?? '').toLowerCase().match(/(\d)\s*x/)
+  const m = (plano ?? '').toLowerCase().match(/(\d)\s*x(?!\d)/) // "6x411" = parcelas, nao frequencia
   return m ? Number(m[1]) : null
 }
 
@@ -270,4 +270,32 @@ export function iniciais(nome: string | null | undefined) {
   if (!partes.length) return '?'
   if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
+/* ---------------- Sugestao de horario fixo pelo historico ---------------- */
+
+export type SugestaoDia = { dia: number; vezes: number; semanas: number }
+
+/**
+ * Dias da semana em que o aluno costuma vir, a partir das datas de aulas
+ * registradas (presencas e faltas) nas ultimas `semanas` semanas.
+ * Um dia entra na sugestao se apareceu em pelo menos 40% das semanas com aula.
+ */
+export function sugerirDiasFixos(datas: string[], hoje: string, semanas = 8): SugestaoDia[] {
+  const inicio = somarDiasISO(hoje, -semanas * 7)
+  const recentes = datas.filter(d => d >= inicio && d <= hoje)
+  const semanasComAula = new Set(recentes.map(d => inicioSemanaISO(d))).size
+  if (!semanasComAula) return []
+
+  const porDia = new Map<number, Set<string>>()
+  for (const d of recentes) {
+    const dia = diaSemanaISO(d)
+    if (!porDia.has(dia)) porDia.set(dia, new Set())
+    porDia.get(dia)!.add(inicioSemanaISO(d))
+  }
+
+  return [...porDia.entries()]
+    .map(([dia, sem]) => ({ dia, vezes: sem.size, semanas: semanasComAula }))
+    .filter(s => s.vezes >= 2 && s.vezes / semanasComAula >= 0.4)
+    .sort((a, b) => b.vezes - a.vezes || a.dia - b.dia)
 }

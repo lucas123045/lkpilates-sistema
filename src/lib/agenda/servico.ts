@@ -406,3 +406,41 @@ export async function salvarConfiguracao(c: Partial<ConfiguracaoEstudio>) {
   const { error } = await supabase.from('configuracoes_estudio').update({ ...c, updated_at: new Date().toISOString() }).eq('id', 1)
   if (error) falhar(error)
 }
+
+/* ======================= Montagem em lote ======================= */
+
+/** Datas de presencas/faltas por aluno desde `desde` (para sugerir dias fixos). */
+export async function datasDeAulasPorAluno(desde: string): Promise<Record<string, string[]>> {
+  const porAluno: Record<string, string[]> = {}
+  const pagina = 1000
+  for (let de = 0; ; de += pagina) {
+    const { data, error } = await supabase
+      .from('aulas')
+      .select('aluno_id, data')
+      .gte('data', desde)
+      .in('status', ['veio', 'faltou'])
+      .is('deleted_at', null)
+      .order('id')
+      .range(de, de + pagina - 1)
+    if (error) falhar(error)
+    for (const a of data ?? []) (porAluno[a.aluno_id] ??= []).push(String(a.data).slice(0, 10))
+    if (!data || data.length < pagina) break
+  }
+  return porAluno
+}
+
+/** Todos os horarios fixos vigentes (para a tela de montagem em lote). */
+export async function horariosFixosVigentes(hoje: string): Promise<HorarioFixo[]> {
+  const { data, error } = await supabase
+    .from('horarios_aluno')
+    .select('id, aluno_id, horario_id, dia_semana, horario, data_inicio, data_fim, professor_id')
+    .or(`data_fim.is.null,data_fim.gte.${hoje}`)
+  if (error) falhar(error)
+  return (data ?? []) as HorarioFixo[]
+}
+
+export async function alunosAtivos(): Promise<AlunoResumo[]> {
+  const { data, error } = await supabase.from('alunos').select(CAMPOS_ALUNO).eq('ativo', true).order('nome')
+  if (error) falhar(error)
+  return (data ?? []) as AlunoResumo[]
+}

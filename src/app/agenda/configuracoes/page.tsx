@@ -131,6 +131,9 @@ function AbaGrade({ grade, fixos, executar }: { grade: Grade; fixos: Record<stri
           <input type="checkbox" checked={mostrarInativos} onChange={e => setMostrarInativos(e.target.checked)} />
           Mostrar turmas desativadas
         </label>
+        <Link href="/agenda/horarios-fixos" className="btn btn-sec" style={{ textDecoration: 'none', marginLeft: 'auto' }}>
+          <Users size={15} /> Ligar alunos às turmas
+        </Link>
       </div>
 
       {!lista.length && <div className="ui-estado">Nenhuma turma cadastrada. Clique em “Nova turma”.</div>}

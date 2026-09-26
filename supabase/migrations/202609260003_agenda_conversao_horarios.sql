@@ -174,9 +174,9 @@ begin
 
   -- Frequencia semanal a partir do texto do plano ("semestral 2x", "3 x por semana").
   update public.alunos
-    set frequencia_semanal = (regexp_match(lower(plano), '(\d)\s*x'))[1]::smallint
+    set frequencia_semanal = (regexp_match(lower(plano), '(\d)\s*x(?!\d)'))[1]::smallint
     where frequencia_semanal is null
-      and lower(coalesce(plano, '')) ~ '(\d)\s*x';
+      and lower(coalesce(plano, '')) ~ '(\d)\s*x(?!\d)';
 
   insert into public.conversao_agenda_log (execucao, origem, origem_id, aluno_id, situacao, detalhe)
     select execucao_atual, 'alunos.plano', al.id::text, al.id, 'aviso',
