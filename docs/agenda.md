@@ -9,6 +9,7 @@ Nada disto foi aplicado no banco ainda. Ordem:
    1. `supabase/migrations/202609260001_agenda_estrutura.sql`
    2. `supabase/migrations/202609260002_agenda_funcoes.sql`
    3. `supabase/migrations/202609260003_agenda_conversao_horarios.sql`
+   4. `supabase/migrations/202609270001_agenda_calendario.sql` (arrastar/redimensionar, criar aula, desfazer)
 3. O passo 3 termina mostrando um resumo. Para ver o detalhe da conversão:
    ```sql
    select situacao, origem, origem_id, detalhe
@@ -63,3 +64,14 @@ Os testes sobem um Postgres em memória (PGlite) com uma réplica do schema atua
 - `agenda_relatorio` (view): cada agendamento com tipo, status, professor efetivo, modalidade, capacidade.
 - `creditos_reposicao_situacao` (view): créditos com situação ativo/usado/vencido/cancelado.
 - Conversão de experimentais: `agenda.tipo = 'experimental'` e `aluno_convertido_id`.
+
+## Calendário (/agenda)
+
+Feito com FullCalendar 6 usando só plugins MIT (timegrid, daygrid, list, interaction, luxon3 para o fuso America/Sao_Paulo).
+
+- Visões: Dia, Semana, Mês, Programação (próximos 30 dias) e 3 dias (padrão no celular). A última visão, os filtros e o "24 horas" ficam salvos por usuário (ou por aparelho, sem login).
+- Clique num espaço vazio: criação rápida (aula única ou semanal, aluno numa aula do horário, bloqueio). Arrastar sobre a grade define o intervalo.
+- Clique numa aula: detalhes, presença rápida, adicionar aluno, professor, lista de espera, editar, cancelar/reativar.
+- Arrastar para mover e puxar a borda para mudar a duração. Em turma semanal pergunta "Somente esta aula / Esta e as seguintes / Todas as aulas". Aulas passadas ou com presença marcada não se movem. Toast com "Desfazer" (até 30 min).
+- Atalhos: `t` hoje, `j`/`k` ou setas, `d` dia, `w` semana, `m` mês, `a` programação, `x` 3 dias, `c` criar, `/` busca, `Esc` fecha.
+- Celular: swipe lateral troca o período, botão "+" flutuante, popovers viram bottom sheet, toque longo para arrastar.

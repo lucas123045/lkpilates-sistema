@@ -444,3 +444,80 @@ export async function alunosAtivos(): Promise<AlunoResumo[]> {
   if (error) falhar(error)
   return (data ?? []) as AlunoResumo[]
 }
+
+/* ======================= Calendario ======================= */
+
+export type EscopoRecorrencia = 'esta' | 'seguintes' | 'todas'
+
+export function criarAula(a: {
+  data: string
+  hora: string
+  duracaoMin: number
+  capacidade: number
+  modalidadeId?: string | null
+  professorId?: string | null
+  repetir?: boolean
+  observacao?: string
+}) {
+  return rpc<Horario>('criar_aula', {
+    data_input: a.data,
+    hora_input: a.hora,
+    duracao_input: a.duracaoMin,
+    capacidade_input: a.capacidade,
+    modalidade_id_input: a.modalidadeId ?? null,
+    professor_id_input: a.professorId ?? null,
+    repetir_input: a.repetir ?? false,
+    observacao_input: a.observacao ?? null
+  })
+}
+
+export function moverAula(m: {
+  horarioId: string
+  data: string
+  novaData: string
+  novaHora: string
+  novaDuracao: number
+  escopo: EscopoRecorrencia
+}) {
+  return rpc<{ movimento_id: string; horario_id: string; movidos: number; modo: string }>('mover_aula', {
+    horario_id_input: m.horarioId,
+    data_input: m.data,
+    nova_data_input: m.novaData,
+    nova_hora_input: m.novaHora,
+    nova_duracao_input: m.novaDuracao,
+    escopo_input: m.escopo
+  })
+}
+
+export function desfazerMovimento(movimentoId: string) {
+  return rpc<{ desfeito: boolean }>('desfazer_movimento', { movimento_id_input: movimentoId })
+}
+
+export function desfazerBloqueio(bloqueioId: string) {
+  return rpc<{ restaurados: number }>('desfazer_bloqueio', { bloqueio_id_input: bloqueioId })
+}
+
+/** Aula unica sem alunos: desativa (reversivel). */
+export async function definirTurmaAtiva(horarioId: string, ativo: boolean) {
+  const { error } = await supabase.from('horarios').update({ ativo, updated_at: new Date().toISOString() }).eq('id', horarioId)
+  if (error) falhar(error)
+}
+
+export async function proximasAulasProfessor(professorId: string, aPartirDe: string, limite = 15): Promise<Agendamento[]> {
+  const { data, error } = await supabase
+    .from('agenda')
+    .select('*')
+    .eq('professor_id', professorId)
+    .gte('data', aPartirDe)
+    .in('status', ['agendado', 'presente', 'falta'])
+    .order('data')
+    .order('hora')
+    .limit(limite)
+  if (error) falhar(error)
+  return (data ?? []) as Agendamento[]
+}
+
+export async function atualizarTurma(horarioId: string, dados: { capacidade?: number; modalidade_id?: string | null }) {
+  const { error } = await supabase.from('horarios').update({ ...dados, updated_at: new Date().toISOString() }).eq('id', horarioId)
+  if (error) falhar(error)
+}

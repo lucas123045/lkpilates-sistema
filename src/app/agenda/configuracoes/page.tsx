@@ -107,7 +107,8 @@ function AbaGrade({ grade, fixos, executar }: { grade: Grade; fixos: Record<stri
   const [mostrarInativos, setMostrarInativos] = useState(false)
   const profs = useMemo(() => new Map(grade.professores.map(p => [p.id, p])), [grade.professores])
   const mods = useMemo(() => new Map(grade.modalidades.map(m => [m.id, m])), [grade.modalidades])
-  const lista = grade.horarios.filter(h => mostrarInativos || h.ativo)
+  // aulas unicas (criadas/movidas no calendario) nao fazem parte da grade semanal
+  const lista = grade.horarios.filter(h => h.origem !== 'aula_unica' && (mostrarInativos || h.ativo))
 
   return (
     <>

@@ -78,7 +78,25 @@ export default function ModalAgendamento({ agendamento: a, professores, configur
       })
       if (!ok) return
     }
-    await executar(() => marcarStatus(a!.id, status), `${nome}: ${ROTULO_STATUS[status].toLowerCase()}.`)
+    const anterior = a!.status
+    setSalvando(true)
+    try {
+      await marcarStatus(a!.id, status)
+      const podeVoltar = anterior === 'agendado' || anterior === 'presente' || anterior === 'falta' || anterior === 'falta_justificada'
+      toast(
+        `${nome}: ${ROTULO_STATUS[status].toLowerCase()}.`,
+        'sucesso',
+        podeVoltar
+          ? { rotulo: 'Desfazer', onClick: () => marcarStatus(a!.id, anterior).then(onAlterado).catch(e => toast(mensagemDeErro(e), 'erro')) }
+          : undefined
+      )
+      onAlterado()
+      onFechar()
+    } catch (e) {
+      toast(mensagemDeErro(e), 'erro')
+    } finally {
+      setSalvando(false)
+    }
   }
 
   async function confirmarDesmarcacao() {
@@ -97,7 +115,10 @@ export default function ModalAgendamento({ agendamento: a, professores, configur
     setSalvando(true)
     try {
       const r = await desmarcar(a!.id, { gerarCredito: concederCredito ? true : null, motivo })
-      toast(r.credito_id ? `${nome} desmarcado. Crédito de reposição gerado.` : `${nome} desmarcado.`)
+      toast(r.credito_id ? `${nome} desmarcado. Crédito de reposição gerado.` : `${nome} desmarcado.`, 'sucesso', {
+        rotulo: 'Desfazer',
+        onClick: () => marcarStatus(a!.id, 'agendado').then(onAlterado).catch(e => toast(mensagemDeErro(e), 'erro'))
+      })
       if (r.lista_espera > 0) toast(`Vaga liberada: ${r.lista_espera} pessoa(s) na lista de espera deste horário.`, 'aviso')
       onAlterado()
       onFechar()

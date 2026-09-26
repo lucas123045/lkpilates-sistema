@@ -6,7 +6,8 @@ import Modal from './Modal'
 import './ui.css'
 
 type TipoToast = 'sucesso' | 'erro' | 'aviso' | 'info'
-type Toast = { id: number; mensagem: string; tipo: TipoToast }
+type AcaoToast = { rotulo: string; onClick: () => void }
+type Toast = { id: number; mensagem: string; tipo: TipoToast; acao?: AcaoToast }
 
 type PedidoConfirmacao = {
   titulo: string
@@ -17,7 +18,7 @@ type PedidoConfirmacao = {
 }
 
 type Feedback = {
-  toast: (mensagem: string, tipo?: TipoToast) => void
+  toast: (mensagem: string, tipo?: TipoToast, acao?: AcaoToast) => void
   confirmar: (pedido: PedidoConfirmacao) => Promise<boolean>
 }
 
@@ -37,10 +38,10 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const resolver = useRef<((v: boolean) => void) | null>(null)
   const proximoId = useRef(1)
 
-  const toast = useCallback((mensagem: string, tipo: TipoToast = 'sucesso') => {
+  const toast = useCallback((mensagem: string, tipo: TipoToast = 'sucesso', acao?: AcaoToast) => {
     const id = proximoId.current++
-    setToasts(t => [...t, { id, mensagem, tipo }])
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), tipo === 'erro' ? 7000 : 3800)
+    setToasts(t => [...t, { id, mensagem, tipo, acao }])
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), acao ? 9000 : tipo === 'erro' ? 7000 : 3800)
   }, [])
 
   const confirmar = useCallback((p: PedidoConfirmacao) => {
@@ -65,7 +66,19 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
           return (
             <div key={t.id} className={`ui-toast ui-toast-${t.tipo}`} onClick={() => setToasts(x => x.filter(y => y.id !== t.id))}>
               <Icone size={18} />
-              <span>{t.mensagem}</span>
+              <span style={{ flex: 1 }}>{t.mensagem}</span>
+              {t.acao && (
+                <button
+                  className="ui-toast-acao"
+                  onClick={e => {
+                    e.stopPropagation()
+                    setToasts(x => x.filter(y => y.id !== t.id))
+                    t.acao!.onClick()
+                  }}
+                >
+                  {t.acao.rotulo}
+                </button>
+              )}
             </div>
           )
         })}

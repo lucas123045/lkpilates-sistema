@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Search } from 'lucide-react'
-import { formatarDataLonga, formatarHora, hojeEstudio } from '@/lib/agenda/datas'
+import { useEffect, useState } from 'react'
+import { formatarHora } from '@/lib/agenda/datas'
 import { horarioBloqueado, ocupacao } from '@/lib/agenda/regras'
-import { buscarAlunos, carregarPeriodo, proximasAulasAluno } from '@/lib/agenda/servico'
+import { buscarAlunos, carregarPeriodo } from '@/lib/agenda/servico'
 import type { AlunoResumo, DadosPeriodo } from '@/lib/agenda/tipos'
 import { agendamentosDaTurma, turmasDoDia } from '../util'
 
@@ -74,75 +73,6 @@ export function SeletorAluno({
               <span>{a.nome}</span>
               <span className={`ui-chip ${a.ativo ? '' : 'ui-chip-vermelho'}`}>{a.ativo ? a.plano || 'sem plano' : 'inativo'}</span>
             </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** Busca rapida da barra: "em que horarios a Maria esta?". */
-export function BuscaRapidaAluno({ onIrPara }: { onIrPara: (data: string, horarioId: string | null) => void }) {
-  const [termo, setTermo] = useState('')
-  const [aberto, setAberto] = useState(false)
-  const [escolhido, setEscolhido] = useState<AlunoResumo | null>(null)
-  const [proximas, setProximas] = useState<{ id: number; data: string; hora: string; horario_id: string | null }[] | null>(null)
-  const { alunos, carregando } = useAlunosBusca(termo)
-  const caixa = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const fora = (e: MouseEvent) => caixa.current && !caixa.current.contains(e.target as Node) && setAberto(false)
-    document.addEventListener('mousedown', fora)
-    return () => document.removeEventListener('mousedown', fora)
-  }, [])
-
-  async function escolher(a: AlunoResumo) {
-    setEscolhido(a)
-    setProximas(null)
-    setProximas(await proximasAulasAluno(a.id, hojeEstudio()))
-  }
-
-  return (
-    <div className="ag-busca" ref={caixa}>
-      <Search size={15} />
-      <input
-        placeholder="Buscar aluno na agenda..."
-        value={termo}
-        onFocus={() => setAberto(true)}
-        onChange={e => {
-          setTermo(e.target.value)
-          setEscolhido(null)
-          setAberto(true)
-        }}
-      />
-      {aberto && termo.trim().length >= 2 && (
-        <div className="ui-lista-opcoes ag-busca-resultado">
-          {carregando && <div style={{ padding: 10, color: 'var(--ink-500)' }}>Buscando...</div>}
-          {!carregando && !alunos.length && <div style={{ padding: 10, color: 'var(--ink-500)' }}>Nenhum aluno encontrado.</div>}
-          {alunos.map(a => (
-            <div key={a.id}>
-              <button className={escolhido?.id === a.id ? 'selecionado' : ''} onClick={() => escolher(a)}>
-                <span>{a.nome}</span>
-                {!a.ativo && <span className="ui-chip ui-chip-vermelho">inativo</span>}
-              </button>
-              {escolhido?.id === a.id && (
-                <div className="ag-proximas">
-                  {proximas === null && 'Carregando...'}
-                  {proximas?.length === 0 && 'Sem aulas agendadas a partir de hoje.'}
-                  {proximas?.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        onIrPara(p.data, p.horario_id)
-                        setAberto(false)
-                      }}
-                    >
-                      {formatarDataLonga(p.data)} às {formatarHora(p.hora)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           ))}
         </div>
       )}

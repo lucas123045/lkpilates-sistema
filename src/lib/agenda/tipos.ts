@@ -38,6 +38,8 @@ export type Horario = {
   vigente_desde: string
   vigente_ate: string | null
   observacao: string | null
+  /** 'manual' | 'conversao' | 'aula_unica' */
+  origem?: string
 }
 
 export type AlunoResumo = {

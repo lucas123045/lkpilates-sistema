@@ -43,7 +43,7 @@ export default function HorariosFixosEmLote() {
         datasDeAulasPorAluno(somarDias(hoje, -SEMANAS_HISTORICO * 7))
       ])
       setAlunos(a)
-      setTurmas(g.horarios.filter(t => t.ativo))
+      setTurmas(g.horarios.filter(t => t.ativo && t.origem !== 'aula_unica'))
       setModalidades(new Map(g.modalidades.map(m => [m.id, m])))
       setFixos(f)
       setHistorico(h)

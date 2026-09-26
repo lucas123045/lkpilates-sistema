@@ -367,7 +367,7 @@ function ModalNovoFixo({
   const [sel, setSel] = useState<string | null>(null)
   const [inicio, setInicio] = useState(hojeEstudio())
   const [prof, setProf] = useState('')
-  const ativos = horarios.filter(h => h.ativo)
+  const ativos = horarios.filter(h => h.ativo && h.origem !== 'aula_unica')
 
   async function salvar() {
     if (!sel) return

@@ -6,7 +6,7 @@ import Modal from '@/app/components/ui/Modal'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import { formatarData, formatarDataLonga, formatarHora, sobrepoe } from '@/lib/agenda/datas'
 import { ocupaVaga } from '@/lib/agenda/regras'
-import { bloquear, entrarListaEspera, sairListaEspera, trocarProfessor } from '@/lib/agenda/servico'
+import { bloquear, desfazerBloqueio, entrarListaEspera, sairListaEspera, trocarProfessor } from '@/lib/agenda/servico'
 import type { AlunoResumo, DadosPeriodo, Horario, Professor } from '@/lib/agenda/tipos'
 import { agendamentosDaTurma, turmasDoDia } from '../util'
 import { SeletorAluno } from './Seletores'
@@ -16,10 +16,16 @@ type Turma = { horario: Horario; data: string }
 function useSalvar(onAlterado: () => void, onFechar: () => void) {
   const { toast } = useFeedback()
   const [salvando, setSalvando] = useState(false)
-  async function salvar(acao: () => Promise<string>) {
+  async function salvar(acao: () => Promise<string | { mensagem: string; desfazer: () => Promise<unknown> }>) {
     setSalvando(true)
     try {
-      toast(await acao())
+      const r = await acao()
+      if (typeof r === 'string') toast(r)
+      else
+        toast(r.mensagem, 'sucesso', {
+          rotulo: 'Desfazer',
+          onClick: () => r.desfazer().then(onAlterado).catch(e => toast(mensagemDeErro(e), 'erro'))
+        })
       onAlterado()
       onFechar()
     } catch (e) {
@@ -57,7 +63,10 @@ export function ModalCancelarAula({ turma, dados, onFechar, onAlterado }: { turm
     if (!ok) return
     salvar(async () => {
       const r = await bloquear({ data: turma!.data, horarioId: turma!.horario.id, motivo, gerarCredito: credito })
-      return `Aula cancelada: ${r.cancelados} agendamento(s), ${r.creditos} crédito(s) gerado(s).`
+      return {
+        mensagem: `Aula cancelada: ${r.cancelados} agendamento(s), ${r.creditos} crédito(s) gerado(s).`,
+        desfazer: () => desfazerBloqueio(r.bloqueio_id)
+      }
     })
   }
 
@@ -293,7 +302,10 @@ export function ModalBloqueio({ aberto, dataInicial, onFechar, onAlterado }: { a
     if (!ok) return
     salvar(async () => {
       const r = await bloquear({ data, dataFim: dataFim || null, motivo, gerarCredito: credito })
-      return `Bloqueado. ${r.cancelados} aula(s) de aluno cancelada(s), ${r.creditos} crédito(s) gerado(s).`
+      return {
+        mensagem: `Bloqueado. ${r.cancelados} aula(s) de aluno cancelada(s), ${r.creditos} crédito(s) gerado(s).`,
+        desfazer: () => desfazerBloqueio(r.bloqueio_id)
+      }
     })
   }
 
