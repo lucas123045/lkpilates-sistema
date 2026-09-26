@@ -51,6 +51,13 @@ export class ErroAgenda extends Error {
 }
 
 function falhar(error: { message: string; code?: string }): never {
+  // PGRST202 = funcao inexistente, PGRST205 = tabela inexistente: migrations da agenda nao aplicadas
+  if (error.code === 'PGRST202' || error.code === 'PGRST205') {
+    throw new ErroAgenda(
+      'A agenda ainda não foi instalada no banco. Rode as migrations 202609260001, 002 e 003 no SQL Editor do Supabase (veja docs/agenda.md).',
+      'DESCONHECIDO'
+    )
+  }
   throw new ErroAgenda(error.message, CODIGOS[error.code ?? ''] ?? 'DESCONHECIDO')
 }
 
