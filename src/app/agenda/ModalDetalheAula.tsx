@@ -115,13 +115,23 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
   const voltar = () => marcarStatus(a.id, 'agendado')
 
   async function excluir() {
+    const marcada = a.status === 'presente' || a.status === 'falta' || a.status === 'falta_justificada'
     let escopo: EscopoAula = 'esta'
     if (a.recorrencia_id) {
       const r = await perguntarEscopo('Excluir aula recorrente')
       if (!r) return
       escopo = r
-    } else {
-      const ok = await confirmar({ titulo: 'Excluir esta aula?', mensagem: `${nome} · ${formatarData(a.data)} às ${formatarHora(a.hora)}`, confirmar: 'Excluir', perigo: true })
+    }
+    // Sempre confirma quando havia marcacao; em aula unica, confirma sempre
+    if (marcada || !a.recorrencia_id) {
+      const ok = await confirmar({
+        titulo: marcada ? 'Excluir aula já marcada?' : 'Excluir esta aula?',
+        mensagem: marcada
+          ? `${nome} · ${formatarData(a.data)} às ${formatarHora(a.hora)}. A ${a.status === 'presente' ? 'presença' : 'falta'} registrada será desfeita${a.status === 'falta_justificada' ? ' e o crédito de reposição gerado será cancelado' : ' e a aula volta para o pacote do aluno'}.`
+          : `${nome} · ${formatarData(a.data)} às ${formatarHora(a.hora)}`,
+        confirmar: 'Excluir',
+        perigo: true
+      })
       if (!ok) return
     }
     acao(() => excluirAulaCliente(a.id, escopo), escopo === 'proximas' ? 'Aula e próximas excluídas.' : 'Aula excluída.')
@@ -243,7 +253,7 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
         <button className="btn btn-sec" onClick={onEditar} disabled={salvando}>
           <Pencil size={15} /> Editar
         </button>
-        {a.status !== 'presente' && a.status !== 'falta' && a.status !== 'falta_justificada' && (
+        {a.status !== 'cancelado_estudio' && (
           <button className="btn btn-sec" onClick={excluir} disabled={salvando} style={{ color: 'var(--state-danger-dark)' }}>
             <Trash2 size={15} /> Excluir
           </button>

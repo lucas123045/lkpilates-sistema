@@ -127,11 +127,31 @@ describe('editar e excluir aula recorrente', () => {
     expect((await aulas(ANA)).map(a => a.data)).toEqual(['2026-09-28', '2026-09-30'])
   })
 
-  it('nao exclui aula com presenca marcada', async () => {
+  it('exclui aula marcada por engano: desfaz a presenca e devolve ao pacote', async () => {
     const seg = await um(db, `select id from agenda where aluno_id = $1 and data = '2026-09-28'`, [ANA])
     await um(db, `select marcar_status($1, 'presente')`, [seg.id])
     expect((await um(db, `select aulas_restantes from alunos where id = $1`, [ANA])).aulas_restantes).toBe(39)
-    expect(await codigoErro(db.query(`select excluir_aula_cliente($1, 'esta')`, [seg.id]))).toBe('LK006')
+    const r = (await um(db, `select excluir_aula_cliente($1, 'esta') r`, [seg.id])).r
+    expect(r).toMatchObject({ excluidas: 1, marcacao_desfeita: true })
+    expect((await um(db, `select aulas_restantes from alunos where id = $1`, [ANA])).aulas_restantes).toBe(40)
+    expect((await um(db, `select count(*)::int n from aulas where aluno_id = $1 and deleted_at is null`, [ANA])).n).toBe(0)
+    expect((await aulas(ANA)).find(a => a.data === '2026-09-28')).toMatchObject({ excluida: true })
+  })
+
+  it('exclui aula avulsa com falta justificada: cancela o credito nao usado', async () => {
+    const r = await criarAula({ aluno: BIA, data: '2026-10-02', das: '15:00', ate: '16:00' })
+    await um(db, `select desmarcar($1)`, [r.agenda_id])
+    expect((await um(db, `select count(*)::int n from creditos_reposicao where cancelado_em is null`)).n).toBe(1)
+    await um(db, `select excluir_aula_cliente($1, 'esta')`, [r.agenda_id])
+    expect((await um(db, `select count(*)::int n from creditos_reposicao where cancelado_em is null`)).n).toBe(0)
+    expect((await um(db, `select count(*)::int n from agenda where id = $1`, [r.agenda_id])).n).toBe(0)
+  })
+
+  it('nao exclui falta cujo credito ja foi usado em outra aula', async () => {
+    const qua = await um(db, `select id from agenda where aluno_id = $1 and data = '2026-09-30'`, [ANA])
+    const { credito_id } = (await um(db, `select desmarcar($1) r`, [qua.id])).r
+    await db.exec(`update creditos_reposicao set usado_em = now() where id = '${credito_id}'`)
+    expect(await codigoErro(db.query(`select excluir_aula_cliente($1, 'esta')`, [qua.id]))).toBe('LK007')
   })
 
   it('falta justificada em aula da serie gera credito', async () => {
