@@ -33,9 +33,10 @@ import './agenda.css'
 type Visao = 'timeGridDay' | 'timeGridWeek'
 type Servico = Modalidade & { duracao_padrao_min?: number; cor?: string }
 
+// Agendada usa a cor escolhida na aula (ou a do profissional); as demais cores indicam o status.
+const COR_AGENDADA_PADRAO = '#1f4fd8'
 const COR_STATUS: Record<string, string> = {
-  agendado: '#16a34a',
-  presente: '#15803d',
+  presente: '#16a34a',
   falta: '#dc2626',
   falta_justificada: '#6b7280',
   desmarcado: '#6b7280',
@@ -43,6 +44,24 @@ const COR_STATUS: Record<string, string> = {
 }
 
 const DATA_VALIDA = /^\d{4}-\d{2}-\d{2}$/
+
+/** Texto escuro em fundo claro, branco em fundo escuro (legivel com qualquer cor escolhida). */
+function corDoTexto(fundo: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(fundo)
+  if (!m) return '#fff'
+  const n = parseInt(m[1], 16)
+  const canal = (v: number) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  }
+  const lum = 0.2126 * canal((n >> 16) & 255) + 0.7152 * canal((n >> 8) & 255) + 0.0722 * canal(n & 255)
+  return lum > 0.45 ? '#12172b' : '#fff'
+}
+
+function corDoCard(a: Agendamento, corProfissional: string | undefined) {
+  if (a.status === 'agendado') return a.cor ?? corProfissional ?? COR_AGENDADA_PADRAO
+  return COR_STATUS[a.status] ?? COR_AGENDADA_PADRAO
+}
 
 export default function AgendaPage() {
   return (
@@ -148,14 +167,14 @@ function Agenda() {
     const lista: EventInput[] = visiveis.map(a => {
       const fim = horaFim(a.hora, a.duracao_min)
       const passada = momentoMs(a.data, fim) < agora
-      const cor = COR_STATUS[a.status] ?? '#16a34a'
+      const cor = corDoCard(a, a.professor_id ? professores.get(a.professor_id)?.cor : undefined)
       return {
         id: String(a.id),
         start: `${a.data}T${a.hora.slice(0, 5)}`,
         end: `${a.data}T${fim}`,
         backgroundColor: cor,
         borderColor: cor,
-        textColor: '#fff',
+        textColor: corDoTexto(cor),
         classNames: ['agm-ev', `st-${a.status}`, ...(passada ? ['passada'] : [])],
         editable: a.status === 'agendado' && !passada && !a.horario_id,
         extendedProps: { a }
@@ -168,7 +187,7 @@ function Agenda() {
       }
     }
     return lista
-  }, [visiveis, dados, agora])
+  }, [visiveis, dados, agora, professores])
 
   const detalhe = detalheId !== null ? dados?.agendamentos.find(a => a.id === detalheId) ?? null : null
 
@@ -291,7 +310,8 @@ function Agenda() {
                 </button>
               ))}
               <span className="agm-legenda-status">
-                <i style={{ background: COR_STATUS.agendado }} /> Agendada
+                <i style={{ background: 'conic-gradient(#1f4fd8, #9333ea, #ea580c, #db2777, #1f4fd8)' }} /> Agendada (cor escolhida)
+                <i style={{ background: COR_STATUS.presente }} /> Presente
                 <i style={{ background: COR_STATUS.falta }} /> Falta
                 <i style={{ background: COR_STATUS.desmarcado }} /> Desmarcada
               </span>
@@ -355,7 +375,12 @@ function Agenda() {
                 return (
                   <div
                     className="agm-card"
-                    style={{ ['--faixa' as string]: a.cor ?? prof?.cor ?? '#98a2b3' }}
+                    style={(() => {
+                      const fundo = corDoCard(a, prof?.cor)
+                      // faixa lateral = profissional; se for a mesma cor do fundo, uma faixa escurecida
+                      const faixa = prof?.cor && prof.cor.toLowerCase() !== fundo.toLowerCase() ? prof.cor : 'rgba(0, 0, 0, 0.28)'
+                      return { ['--faixa' as string]: faixa, color: corDoTexto(fundo) }
+                    })()}
                     title={`${nome} · ${formatarHora(a.hora)}–${horaFim(a.hora, a.duracao_min)}${prof ? ` · ${prof.nome}` : ''}${serv ? ` · ${serv.nome}` : ''} · ${ROTULO_STATUS[a.status]}${atrasado ? ' · pagamento atrasado' : ''}`}
                   >
                     <span className="agm-hora">

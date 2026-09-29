@@ -256,14 +256,14 @@ export const ROTULO_TIPO: Record<TipoAgendamento, string> = {
 export const PALETA_PROFESSORES = [
   '#1f4fd8', // azul
   '#ea580c', // laranja
-  '#15803d', // verde
+  '#1e3a8a', // azul-marinho (verde fica reservado para "presente" na agenda)
   '#9333ea', // roxo
   '#db2777', // rosa
   '#0e7490', // petroleo
   '#a16207', // mostarda
-  '#b91c1c', // vermelho
-  '#4d7c0f', // oliva
-  '#475569' // grafite
+  '#a21caf', // magenta (vermelho fica reservado para "falta")
+  '#7c2d12', // marrom
+  '#111827' // preto (cinza fica reservado para "desmarcada")
 ]
 
 export function iniciais(nome: string | null | undefined) {
