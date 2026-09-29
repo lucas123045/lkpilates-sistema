@@ -114,11 +114,11 @@ describe('capacidade e conflitos', () => {
 
   it('conflito do aluno ignora desmarcados e o proprio agendamento', () => {
     const doAluno = [
-      { id: 1, data: '2026-09-29', hora: '18:00', duracao_min: 55, status: 'agendado', horario_id: 'a' },
-      { id: 2, data: '2026-09-29', hora: '07:00', duracao_min: 55, status: 'desmarcado', horario_id: 'b' }
+      { id: 'a1', data: '2026-09-29', hora: '18:00', duracao_min: 55, status: 'agendado', horario_id: 'a' },
+      { id: 'a2', data: '2026-09-29', hora: '07:00', duracao_min: 55, status: 'desmarcado', horario_id: 'b' }
     ] as any
-    expect(conflitoDoAluno(doAluno, '2026-09-29', '18:30', 55)?.id).toBe(1)
-    expect(conflitoDoAluno(doAluno, '2026-09-29', '18:30', 55, 1)).toBeUndefined()
+    expect(conflitoDoAluno(doAluno, '2026-09-29', '18:30', 55)?.id).toBe('a1')
+    expect(conflitoDoAluno(doAluno, '2026-09-29', '18:30', 55, 'a1')).toBeUndefined()
     expect(conflitoDoAluno(doAluno, '2026-09-29', '07:00', 55)).toBeUndefined()
   })
 

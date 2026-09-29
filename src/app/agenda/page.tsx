@@ -72,7 +72,7 @@ function Agenda() {
   const [mobile, setMobile] = useState(false)
   const [verFiltros, setVerFiltros] = useState(false)
   const [nova, setNova] = useState<InicialAula | null>(null)
-  const [detalheId, setDetalheId] = useState<number | null>(null)
+  const [detalheId, setDetalheId] = useState<string | null>(null)
   const [editando, setEditando] = useState<Agendamento | null>(null)
   const requisicao = useRef(0)
   const rolou = useRef(false)

@@ -156,7 +156,7 @@ export function verificarAgendamento(alunoId: string | null, horarioId: string, 
   })
 }
 
-export function marcarStatus(agendamentoId: number, status: Extract<StatusAgendamento, 'agendado' | 'presente' | 'falta' | 'falta_justificada'>, observacao?: string) {
+export function marcarStatus(agendamentoId: string, status: Extract<StatusAgendamento, 'agendado' | 'presente' | 'falta' | 'falta_justificada'>, observacao?: string) {
   return rpc<Agendamento>('marcar_status', {
     agenda_id_input: agendamentoId,
     status_input: status,
@@ -165,13 +165,13 @@ export function marcarStatus(agendamentoId: number, status: Extract<StatusAgenda
 }
 
 export function marcarTodosPresentes(horarioId: string, data: string) {
-  return rpc<{ marcados: number; erros: { agenda_id: number; nome: string; erro: string }[] }>('marcar_todos_presentes', {
+  return rpc<{ marcados: number; erros: { agenda_id: string; nome: string; erro: string }[] }>('marcar_todos_presentes', {
     horario_id_input: horarioId,
     data_input: data
   })
 }
 
-export function desmarcar(agendamentoId: number, opcoes: { gerarCredito?: boolean | null; motivo?: string } = {}) {
+export function desmarcar(agendamentoId: string, opcoes: { gerarCredito?: boolean | null; motivo?: string } = {}) {
   return rpc<ResultadoDesmarcacao>('desmarcar', {
     agenda_id_input: agendamentoId,
     gerar_credito_input: opcoes.gerarCredito ?? null,
@@ -179,7 +179,7 @@ export function desmarcar(agendamentoId: number, opcoes: { gerarCredito?: boolea
   })
 }
 
-export function remarcar(agendamentoId: number, horarioId: string, data: string, forcarEncaixe = false) {
+export function remarcar(agendamentoId: string, horarioId: string, data: string, forcarEncaixe = false) {
   return rpc<Agendamento>('remarcar', {
     agenda_id_input: agendamentoId,
     horario_id_input: horarioId,
@@ -219,7 +219,7 @@ export function trocarProfessor(t: {
   })
 }
 
-export async function salvarObservacao(agendamentoId: number, observacao: string) {
+export async function salvarObservacao(agendamentoId: string, observacao: string) {
   const { error } = await supabase
     .from('agenda')
     .update({ observacao: observacao.trim() || null, updated_at: new Date().toISOString() })
@@ -239,7 +239,7 @@ export async function sairListaEspera(id: string) {
   if (error) falhar(error)
 }
 
-export async function marcarExperimentalConvertido(agendamentoId: number, alunoId: string) {
+export async function marcarExperimentalConvertido(agendamentoId: string, alunoId: string) {
   const { error } = await supabase.from('agenda').update({ aluno_convertido_id: alunoId }).eq('id', agendamentoId)
   if (error) falhar(error)
 }
@@ -542,7 +542,7 @@ export type DadosAula = {
 }
 
 export function criarAulaCliente(a: DadosAula, forcar = false) {
-  return rpc<{ recorrencia_id?: string; agenda_id?: number; conflitos: string[] }>('criar_aula_cliente', {
+  return rpc<{ recorrencia_id?: string; agenda_id?: string; conflitos: string[] }>('criar_aula_cliente', {
     aluno_id_input: a.alunoId,
     nome_livre_input: a.nomeLivre ?? null,
     telefone_livre_input: a.telefoneLivre ?? null,
@@ -558,7 +558,7 @@ export function criarAulaCliente(a: DadosAula, forcar = false) {
   })
 }
 
-export function editarAulaCliente(agendaId: number, escopo: EscopoAula, a: Omit<DadosAula, 'alunoId' | 'nomeLivre' | 'telefoneLivre'>, forcar = false) {
+export function editarAulaCliente(agendaId: string, escopo: EscopoAula, a: Omit<DadosAula, 'alunoId' | 'nomeLivre' | 'telefoneLivre'>, forcar = false) {
   return rpc<{ escopo: string; conflitos: string[] }>('editar_aula_cliente', {
     agenda_id_input: agendaId,
     escopo_input: escopo,
@@ -574,7 +574,7 @@ export function editarAulaCliente(agendaId: number, escopo: EscopoAula, a: Omit<
   })
 }
 
-export function excluirAulaCliente(agendaId: number, escopo: EscopoAula) {
+export function excluirAulaCliente(agendaId: string, escopo: EscopoAula) {
   return rpc<{ excluidas: number }>('excluir_aula_cliente', { agenda_id_input: agendaId, escopo_input: escopo })
 }
 

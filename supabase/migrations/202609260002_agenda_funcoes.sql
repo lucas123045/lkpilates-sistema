@@ -123,7 +123,7 @@ create or replace function public.agenda_validar_vaga(
   horario_id_input uuid,
   data_input date,
   aluno_id_input uuid,
-  ignorar_agenda_id_input bigint default null,
+  ignorar_agenda_id_input uuid default null,
   forcar_encaixe_input boolean default false
 )
 returns public.horarios
@@ -197,7 +197,7 @@ create or replace function public.agenda_gravar(
   experimental_nome_input text,
   experimental_telefone_input text,
   observacao_input text,
-  remarcado_de_id_input bigint
+  remarcado_de_id_input uuid
 )
 returns public.agenda
 language plpgsql
@@ -223,7 +223,7 @@ begin
       encaixe = lotado,
       aula_id = null,
       cancelamento_motivo = null,
-      remarcado_de_id = coalesce(remarcado_de_id_input::text, a.remarcado_de_id::text)::bigint,
+      remarcado_de_id = coalesce(remarcado_de_id_input, a.remarcado_de_id),
       status_alterado_em = now(),
       alterado_por = auth.uid(),
       updated_at = now()
@@ -365,7 +365,7 @@ $$;
 -- ---------------------------------------------------------------------
 
 create or replace function public.agenda_aplicar_status(
-  agenda_id_input bigint,
+  agenda_id_input uuid,
   status_input text,
   gerar_credito_input boolean default true
 )
@@ -541,7 +541,7 @@ end;
 $$;
 
 create or replace function public.marcar_status(
-  agenda_id_input bigint,
+  agenda_id_input uuid,
   status_input text,
   observacao_input text default null
 )
@@ -602,7 +602,7 @@ $$;
 -- Desmarca calculando a antecedencia. Dentro do prazo: falta justificada + credito.
 -- Fora do prazo: falta (debita o pacote). gerar_credito_input sobrepoe a regra.
 create or replace function public.desmarcar(
-  agenda_id_input bigint,
+  agenda_id_input uuid,
   gerar_credito_input boolean default null,
   motivo_input text default null
 )
@@ -667,7 +667,7 @@ end;
 $$;
 
 create or replace function public.remarcar(
-  agenda_id_input bigint,
+  agenda_id_input uuid,
   horario_id_input uuid,
   data_input date,
   forcar_encaixe_input boolean default false
@@ -773,7 +773,7 @@ $$;
 create or replace function public.trocar_professor(
   professor_id_input uuid,
   escopo_input text,
-  agenda_id_input bigint default null,
+  agenda_id_input uuid default null,
   horario_id_input uuid default null,
   data_input date default null
 )

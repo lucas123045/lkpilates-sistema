@@ -101,7 +101,7 @@ export function conflitoDoAluno(
   data: string,
   hora: string,
   duracaoMin: number,
-  ignorarId?: number
+  ignorarId?: string
 ) {
   return agendamentosDoAluno.find(
     a =>

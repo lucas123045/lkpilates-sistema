@@ -55,7 +55,8 @@ export type AlunoResumo = {
 }
 
 export type Agendamento = {
-  id: number
+  /** uuid no banco */
+  id: string
   aluno_id: string | null
   horario_id: string | null
   data: string
@@ -73,7 +74,7 @@ export type Agendamento = {
   aula_id: number | null
   credito_usado_id: string | null
   cancelamento_motivo: string | null
-  remarcado_de_id: number | null
+  remarcado_de_id: string | null
   recorrencia_id?: string | null
   servico_id?: string | null
   cor?: string | null
@@ -93,8 +94,8 @@ export type Bloqueio = {
 export type Credito = {
   id: string
   aluno_id: string
-  agendamento_origem_id: number | null
-  agendamento_destino_id: number | null
+  agendamento_origem_id: string | null
+  agendamento_destino_id: string | null
   criado_em: string
   expira_em: string
   usado_em: string | null

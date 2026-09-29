@@ -255,7 +255,7 @@ function Clientes() {
           onSalvo={async id => {
             if (experimentalId) {
               try {
-                await marcarExperimentalConvertido(Number(experimentalId), id)
+                await marcarExperimentalConvertido(experimentalId, id)
               } catch (e) {
                 toast(mensagemDeErro(e), 'erro')
               }

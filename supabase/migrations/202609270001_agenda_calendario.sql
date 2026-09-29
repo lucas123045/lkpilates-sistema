@@ -280,7 +280,7 @@ declare
   unica boolean;
   delta integer := nova_data_input - data_input;
   novo_dia smallint := extract(isodow from nova_data_input);
-  ids bigint[];
+  ids uuid[];
   linhas jsonb;
   conflito text;
   novo_bloqueio uuid;
@@ -514,7 +514,7 @@ begin
   -- Nada movido pode ter sido marcado depois
   if exists (
     select 1 from public.agenda a
-    join jsonb_array_elements(m.dados -> 'linhas') x on (x ->> 'id')::bigint = a.id
+    join jsonb_array_elements(m.dados -> 'linhas') x on (x ->> 'id')::uuid = a.id
     where a.status <> 'agendado'
   ) then
     raise exception 'Algum aluno desta aula ja foi marcado; desfaca a marcacao antes' using errcode = 'LK006';
@@ -532,7 +532,7 @@ begin
     update public.agenda set
       horario_id = (l ->> 'horario_id')::uuid, data = (l ->> 'data')::date,
       hora = (l ->> 'hora')::time, duracao_min = (l ->> 'duracao_min')::integer, updated_at = now()
-    where id = (l ->> 'id')::bigint;
+    where id = (l ->> 'id')::uuid;
   end loop;
 
   if m.tipo = 'unica' or m.tipo = 'todas' then

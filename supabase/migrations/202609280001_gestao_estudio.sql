@@ -10,6 +10,705 @@
 --   agenda       -> cada aula de um cliente numa data (recorrencia_id, servico, cor)
 -- =====================================================================
 
+-- =====================================================================
+-- Correcao: no banco de producao agenda.id e UUID (as versoes anteriores
+-- destas funcoes recebiam bigint e falhavam). Remove as versoes antigas e
+-- recria com uuid. Seguro rodar de novo.
+-- =====================================================================
+drop function if exists public.agenda_validar_vaga(uuid, date, uuid, bigint, boolean);
+drop function if exists public.agenda_gravar(public.horarios, uuid, date, text, uuid, text, text, text, bigint);
+drop function if exists public.agenda_aplicar_status(bigint, text, boolean);
+drop function if exists public.marcar_status(bigint, text, text);
+drop function if exists public.desmarcar(bigint, boolean, text);
+drop function if exists public.remarcar(bigint, uuid, date, boolean);
+drop function if exists public.trocar_professor(uuid, text, bigint, uuid, date);
+drop function if exists public.conflitos_cliente(uuid, date, time, time, smallint[], bigint, uuid);
+drop function if exists public.editar_aula_cliente(bigint, text, date, time, time, smallint[], uuid, uuid, text, text, boolean);
+drop function if exists public.excluir_aula_cliente(bigint, text);
+
+create or replace function public.agenda_validar_vaga(
+  horario_id_input uuid,
+  data_input date,
+  aluno_id_input uuid,
+  ignorar_agenda_id_input uuid default null,
+  forcar_encaixe_input boolean default false
+)
+returns public.horarios
+language plpgsql
+as $$
+declare
+  turma public.horarios%rowtype;
+  motivo text;
+  ocupados integer;
+begin
+  select * into turma from public.horarios where id = horario_id_input;
+  if not found or not turma.ativo then
+    raise exception 'Horario nao encontrado ou inativo' using errcode = 'LK010';
+  end if;
+
+  if extract(isodow from data_input) <> turma.dia_semana then
+    raise exception 'A data % nao cai no dia da semana deste horario', to_char(data_input, 'DD/MM/YYYY')
+      using errcode = 'LK010';
+  end if;
+
+  if data_input < turma.vigente_desde or (turma.vigente_ate is not null and data_input > turma.vigente_ate) then
+    raise exception 'Horario fora da vigencia em %', to_char(data_input, 'DD/MM/YYYY') using errcode = 'LK010';
+  end if;
+
+  motivo := public.horario_bloqueado(horario_id_input, data_input);
+  if motivo is not null then
+    raise exception 'Horario bloqueado: %', motivo using errcode = 'LK003';
+  end if;
+
+  if aluno_id_input is not null then
+    if exists (
+      select 1 from public.agenda a
+      where a.aluno_id = aluno_id_input
+        and a.horario_id = horario_id_input
+        and a.data = data_input
+        and public.agenda_status_ocupa(a.status)
+        and a.id::text is distinct from ignorar_agenda_id_input::text
+    ) then
+      raise exception 'Aluno ja esta agendado neste horario' using errcode = 'LK005';
+    end if;
+
+    if exists (
+      select 1 from public.agenda a
+      where a.aluno_id = aluno_id_input
+        and a.data = data_input
+        and public.agenda_status_ocupa(a.status)
+        and a.id::text is distinct from ignorar_agenda_id_input::text
+        and (a.hora, a.hora + make_interval(mins => a.duracao_min))
+            overlaps (turma.hora_inicio, turma.hora_inicio + make_interval(mins => turma.duracao_min))
+    ) then
+      raise exception 'Aluno ja tem aula em horario sobreposto nesse dia' using errcode = 'LK002';
+    end if;
+  end if;
+
+  ocupados := public.agenda_ocupados(horario_id_input, data_input);
+  if ocupados >= turma.capacidade and not coalesce(forcar_encaixe_input, false) then
+    raise exception 'Horario lotado (%/%)', ocupados, turma.capacidade using errcode = 'LK001';
+  end if;
+
+  return turma;
+end;
+$$;
+
+create or replace function public.agenda_gravar(
+  turma public.horarios,
+  aluno_id_input uuid,
+  data_input date,
+  tipo_input text,
+  credito_id_input uuid,
+  experimental_nome_input text,
+  experimental_telefone_input text,
+  observacao_input text,
+  remarcado_de_id_input uuid
+)
+returns public.agenda
+language plpgsql
+as $$
+declare
+  resultado public.agenda%rowtype;
+  prof record;
+  lotado boolean;
+begin
+  prof := public.professor_efetivo(turma.id, aluno_id_input, data_input);
+  lotado := public.agenda_ocupados(turma.id, data_input) >= turma.capacidade;
+
+  if aluno_id_input is not null then
+    update public.agenda a set
+      tipo = tipo_input,
+      status = 'agendado',
+      hora = turma.hora_inicio,
+      duracao_min = turma.duracao_min,
+      professor_id = prof.professor_id,
+      professor_origem = prof.origem,
+      credito_usado_id = credito_id_input,
+      observacao = coalesce(observacao_input, a.observacao),
+      encaixe = lotado,
+      aula_id = null,
+      cancelamento_motivo = null,
+      remarcado_de_id = coalesce(remarcado_de_id_input, a.remarcado_de_id),
+      status_alterado_em = now(),
+      alterado_por = auth.uid(),
+      updated_at = now()
+    where a.aluno_id = aluno_id_input and a.horario_id = turma.id and a.data = data_input
+    returning a.* into resultado;
+  end if;
+
+  if resultado.id is null then
+    insert into public.agenda (
+      aluno_id, horario_id, data, hora, duracao_min, tipo, status,
+      professor_id, professor_origem, credito_usado_id,
+      experimental_nome, experimental_telefone, observacao, encaixe,
+      remarcado_de_id, status_alterado_em, alterado_por
+    ) values (
+      aluno_id_input, turma.id, data_input, turma.hora_inicio, turma.duracao_min, tipo_input, 'agendado',
+      prof.professor_id, prof.origem, credito_id_input,
+      experimental_nome_input, experimental_telefone_input, observacao_input, lotado,
+      remarcado_de_id_input, now(), auth.uid()
+    )
+    returning * into resultado;
+  end if;
+
+  if credito_id_input is not null then
+    update public.creditos_reposicao
+      set usado_em = now(), agendamento_destino_id = resultado.id
+      where id = credito_id_input;
+  end if;
+
+  if aluno_id_input is not null then
+    update public.lista_espera
+      set atendido_em = now()
+      where aluno_id = aluno_id_input
+        and horario_id = turma.id
+        and data = data_input
+        and atendido_em is null and cancelado_em is null;
+  end if;
+
+  return resultado;
+end;
+$$;
+
+create or replace function public.marcar_status(
+  agenda_id_input uuid,
+  status_input text,
+  observacao_input text default null
+)
+returns public.agenda
+language plpgsql
+as $$
+declare
+  resultado public.agenda%rowtype;
+begin
+  if status_input not in ('agendado', 'presente', 'falta', 'falta_justificada') then
+    raise exception 'Status invalido: %', status_input using errcode = 'LK010';
+  end if;
+
+  if exists (select 1 from public.agenda where id = agenda_id_input and status in ('desmarcado', 'cancelado_estudio'))
+     and status_input <> 'agendado' then
+    raise exception 'Agendamento desmarcado/cancelado. Reative antes de marcar presenca.' using errcode = 'LK006';
+  end if;
+
+  resultado := public.agenda_aplicar_status(agenda_id_input, status_input, true);
+
+  if observacao_input is not null then
+    update public.agenda set observacao = nullif(trim(observacao_input), ''), updated_at = now()
+      where id = agenda_id_input
+      returning * into resultado;
+  end if;
+
+  return resultado;
+end;
+$$;
+
+create or replace function public.desmarcar(
+  agenda_id_input uuid,
+  gerar_credito_input boolean default null,
+  motivo_input text default null
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  a public.agenda%rowtype;
+  cfg public.configuracoes_estudio%rowtype := public.agenda_configuracao();
+  horas numeric;
+  dentro_prazo boolean;
+  novo_status text;
+  gera boolean;
+  credito_id uuid;
+  espera integer;
+begin
+  select * into a from public.agenda where id = agenda_id_input for update;
+  if not found then
+    raise exception 'Agendamento nao encontrado' using errcode = 'P0002';
+  end if;
+  if a.status <> 'agendado' then
+    raise exception 'So e possivel desmarcar agendamentos com status agendado' using errcode = 'LK006';
+  end if;
+
+  horas := round((extract(epoch from ((a.data + a.hora) - public.agenda_agora())) / 3600)::numeric, 2);
+  dentro_prazo := horas >= cfg.antecedencia_desmarcacao_horas;
+
+  if a.tipo in ('experimental', 'avulsa') then
+    novo_status := 'desmarcado';
+    gera := false;
+  else
+    gera := coalesce(gerar_credito_input, dentro_prazo);
+    novo_status := case when gera then 'falta_justificada' else 'falta' end;
+  end if;
+
+  if novo_status = 'desmarcado' then
+    update public.agenda set status = 'desmarcado', status_alterado_em = now(), alterado_por = auth.uid(), updated_at = now()
+      where id = a.id;
+  else
+    perform public.agenda_aplicar_status(a.id, novo_status, gera);
+  end if;
+
+  update public.agenda set cancelamento_motivo = nullif(trim(motivo_input), '') where id = a.id;
+
+  select c.id into credito_id from public.creditos_reposicao c
+    where c.cancelado_em is null and c.usado_em is null
+      and (c.agendamento_origem_id = a.id or c.id = a.credito_usado_id)
+    order by c.criado_em desc limit 1;
+
+  select count(*) into espera from public.lista_espera e
+    where e.horario_id = a.horario_id and (e.data is null or e.data = a.data)
+      and e.atendido_em is null and e.cancelado_em is null;
+
+  return jsonb_build_object(
+    'status', novo_status,
+    'dentro_prazo', dentro_prazo,
+    'horas_antecedencia', horas,
+    'credito_id', case when gera then credito_id end,
+    'lista_espera', espera
+  );
+end;
+$$;
+
+create or replace function public.remarcar(
+  agenda_id_input uuid,
+  horario_id_input uuid,
+  data_input date,
+  forcar_encaixe_input boolean default false
+)
+returns public.agenda
+language plpgsql
+as $$
+declare
+  origem public.agenda%rowtype;
+  turma public.horarios%rowtype;
+  novo public.agenda%rowtype;
+begin
+  select * into origem from public.agenda where id = agenda_id_input for update;
+  if not found then
+    raise exception 'Agendamento nao encontrado' using errcode = 'P0002';
+  end if;
+  if origem.status <> 'agendado' then
+    raise exception 'So e possivel remarcar agendamentos com status agendado' using errcode = 'LK006';
+  end if;
+  if origem.horario_id = horario_id_input and origem.data = data_input then
+    raise exception 'Escolha outro horario ou data' using errcode = 'LK010';
+  end if;
+
+  perform 1 from public.horarios where id = horario_id_input for update;
+  turma := public.agenda_validar_vaga(horario_id_input, data_input, origem.aluno_id, origem.id, forcar_encaixe_input);
+
+  update public.agenda set status = 'desmarcado', cancelamento_motivo = 'Remarcado',
+    status_alterado_em = now(), alterado_por = auth.uid(), updated_at = now()
+    where id = origem.id;
+
+  novo := public.agenda_gravar(
+    turma, origem.aluno_id, data_input,
+    case when origem.tipo = 'fixo' then 'reposicao' else origem.tipo end,
+    null, origem.experimental_nome, origem.experimental_telefone, origem.observacao, origem.id
+  );
+
+  if origem.credito_usado_id is not null then
+    update public.creditos_reposicao set agendamento_destino_id = novo.id where id = origem.credito_usado_id;
+    update public.agenda set credito_usado_id = origem.credito_usado_id where id = novo.id returning * into novo;
+    update public.agenda set credito_usado_id = null where id = origem.id;
+  end if;
+
+  return novo;
+end;
+$$;
+
+create or replace function public.trocar_professor(
+  professor_id_input uuid,
+  escopo_input text,
+  agenda_id_input uuid default null,
+  horario_id_input uuid default null,
+  data_input date default null
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  a public.agenda%rowtype;
+  agora timestamp := public.agenda_agora();
+  atualizados integer := 0;
+begin
+  if escopo_input not in ('dia', 'permanente') then
+    raise exception 'Escopo invalido' using errcode = 'LK010';
+  end if;
+
+  if agenda_id_input is not null then
+    select * into a from public.agenda where id = agenda_id_input for update;
+    if not found then
+      raise exception 'Agendamento nao encontrado' using errcode = 'P0002';
+    end if;
+
+    if escopo_input = 'permanente' and a.aluno_id is not null then
+      update public.horarios_aluno f set professor_id = professor_id_input, updated_at = now()
+        where f.aluno_id::uuid = a.aluno_id and f.horario_id = a.horario_id
+          and (f.data_fim is null or f.data_fim >= public.agenda_hoje());
+
+      if found then
+        update public.agenda x set professor_id = professor_id_input, professor_origem = 'aluno', updated_at = now()
+          where x.aluno_id = a.aluno_id and x.horario_id = a.horario_id
+            and x.status = 'agendado' and (x.data + x.hora) > agora
+            and x.professor_origem is distinct from 'dia';
+      end if;
+    end if;
+
+    update public.agenda set professor_id = professor_id_input,
+      professor_origem = case when escopo_input = 'dia' then 'dia'
+                              when a.aluno_id is not null then 'aluno' else 'horario' end,
+      updated_at = now()
+      where id = a.id;
+    return jsonb_build_object('atualizados', 1);
+  end if;
+
+  if horario_id_input is null then
+    raise exception 'Informe o agendamento ou o horario' using errcode = 'LK010';
+  end if;
+
+  if escopo_input = 'dia' then
+    if data_input is null then
+      raise exception 'Informe a data da substituicao' using errcode = 'LK010';
+    end if;
+    insert into public.substituicoes_professor (horario_id, data, professor_id)
+      values (horario_id_input, data_input, professor_id_input)
+      on conflict (horario_id, data) do update set professor_id = excluded.professor_id;
+
+    update public.agenda set professor_id = professor_id_input, professor_origem = 'dia', updated_at = now()
+      where horario_id = horario_id_input and data = data_input
+        and status not in ('desmarcado', 'cancelado_estudio');
+    get diagnostics atualizados = row_count;
+  else
+    update public.horarios set professor_id = professor_id_input, updated_at = now()
+      where id = horario_id_input;
+
+    update public.agenda set professor_id = professor_id_input, updated_at = now()
+      where horario_id = horario_id_input and status = 'agendado'
+        and (data + hora) > agora and professor_origem is not distinct from 'horario';
+    get diagnostics atualizados = row_count;
+
+    update public.agenda set professor_id = professor_id_input, professor_origem = 'horario', updated_at = now()
+      where horario_id = horario_id_input and status = 'agendado'
+        and (data + hora) > agora and professor_origem is null;
+  end if;
+
+  return jsonb_build_object('atualizados', atualizados);
+end;
+$$;
+
+create or replace function public.mover_aula(
+  horario_id_input uuid,
+  data_input date,
+  nova_data_input date,
+  nova_hora_input time,
+  nova_duracao_input integer,
+  escopo_input text default 'esta'
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  turma public.horarios%rowtype;
+  alvo public.horarios%rowtype;
+  agora timestamp := public.agenda_agora();
+  unica boolean;
+  delta integer := nova_data_input - data_input;
+  novo_dia smallint := extract(isodow from nova_data_input);
+  ids uuid[];
+  linhas jsonb;
+  conflito text;
+  novo_bloqueio uuid;
+  fixos_alterados jsonb := '[]'::jsonb;
+  fixos_inseridos jsonb := '[]'::jsonb;
+  fx record;
+  novo_fixo_id text;
+  movimento uuid;
+  modo text;
+begin
+  if escopo_input not in ('esta', 'seguintes', 'todas') then
+    raise exception 'Escopo invalido' using errcode = 'LK010';
+  end if;
+  if coalesce(nova_duracao_input, 0) <= 0 then
+    raise exception 'Duracao invalida' using errcode = 'LK010';
+  end if;
+
+  select * into turma from public.horarios where id = horario_id_input for update;
+  if not found then
+    raise exception 'Aula nao encontrada' using errcode = 'P0002';
+  end if;
+  unica := public.horario_eh_unico(turma);
+
+  if (data_input + turma.hora_inicio) < agora then
+    raise exception 'Esta aula ja aconteceu e nao pode ser alterada' using errcode = 'LK006';
+  end if;
+  if (nova_data_input + nova_hora_input) < agora then
+    raise exception 'Nao e possivel mover uma aula para o passado' using errcode = 'LK006';
+  end if;
+
+  -- ================= Somente esta aula =================
+  if escopo_input = 'esta' or unica then
+    perform public.sincronizar_agenda(data_input, data_input);
+
+    if exists (
+      select 1 from public.agenda a
+      where a.horario_id = turma.id and a.data = data_input
+        and a.status in ('presente', 'falta', 'falta_justificada')
+    ) then
+      raise exception 'Esta aula ja tem presenca/falta marcada e nao pode ser movida' using errcode = 'LK006';
+    end if;
+
+    if exists (
+      select 1 from public.bloqueios b
+      where nova_data_input between b.data and coalesce(b.data_fim, b.data) and b.horario_id is null
+    ) then
+      raise exception 'O dia de destino esta bloqueado' using errcode = 'LK003';
+    end if;
+
+    select coalesce(array_agg(a.id), '{}'),
+           coalesce(jsonb_agg(jsonb_build_object('id', a.id, 'horario_id', a.horario_id, 'data', a.data,
+                                                  'hora', a.hora, 'duracao_min', a.duracao_min)), '[]'::jsonb)
+      into ids, linhas
+      from public.agenda a
+      where a.horario_id = turma.id and a.data = data_input and a.status = 'agendado';
+
+    -- Nenhum aluno pode ficar com duas aulas sobrepostas no destino
+    select string_agg(distinct al.nome, ', ') into conflito
+      from public.agenda a
+      join public.alunos al on al.id = a.aluno_id
+      where a.id = any (ids)
+        and exists (
+          select 1 from public.agenda b
+          where b.aluno_id = a.aluno_id and b.data = nova_data_input
+            and public.agenda_status_ocupa(b.status) and not (b.id = any (ids))
+            and (b.hora, b.hora + make_interval(mins => b.duracao_min))
+                overlaps (nova_hora_input, nova_hora_input + make_interval(mins => nova_duracao_input))
+        );
+    if conflito is not null then
+      raise exception 'Conflito de horario no destino: %', conflito using errcode = 'LK002';
+    end if;
+
+    if unica then
+      update public.horarios set
+        dia_semana = novo_dia, hora_inicio = nova_hora_input, duracao_min = nova_duracao_input,
+        vigente_desde = nova_data_input, vigente_ate = nova_data_input, updated_at = now()
+      where id = turma.id
+      returning * into alvo;
+      modo := 'unica';
+    else
+      insert into public.horarios (
+        dia_semana, hora_inicio, duracao_min, professor_id, modalidade_id, capacidade,
+        vigente_desde, vigente_ate, origem, observacao
+      ) values (
+        novo_dia, nova_hora_input, nova_duracao_input, turma.professor_id, turma.modalidade_id, turma.capacidade,
+        nova_data_input, nova_data_input, 'aula_unica', turma.observacao
+      )
+      returning * into alvo;
+
+      -- A ocorrencia original fica fechada (e os fixos nao voltam a ser gerados la)
+      insert into public.bloqueios (data, horario_id, motivo)
+        values (data_input, turma.id,
+                format('Aula movida para %s às %s', to_char(nova_data_input, 'DD/MM'), to_char(nova_hora_input, 'HH24:MI')))
+        returning id into novo_bloqueio;
+      modo := 'esta';
+    end if;
+
+    update public.agenda set
+      horario_id = alvo.id, data = nova_data_input, hora = nova_hora_input, duracao_min = nova_duracao_input,
+      updated_at = now(), alterado_por = auth.uid()
+    where id = any (ids);
+
+    insert into public.agenda_movimentos (tipo, dados)
+      values (modo, jsonb_build_object(
+        'turma_antes', to_jsonb(turma), 'alvo_id', alvo.id, 'bloqueio_id', novo_bloqueio, 'linhas', linhas))
+      returning id into movimento;
+
+    return jsonb_build_object('movimento_id', movimento, 'horario_id', alvo.id, 'movidos', coalesce(array_length(ids, 1), 0), 'modo', modo);
+  end if;
+
+  -- ================= Esta e as seguintes / Todas =================
+  -- Conflito: algum aluno fixo ja tem outra turma fixa sobreposta no novo dia/hora
+  select string_agg(distinct al.nome, ', ') into conflito
+    from public.horarios_aluno f
+    join public.alunos al on al.id = f.aluno_id::uuid and al.ativo
+    where f.horario_id = turma.id
+      and (f.data_fim is null or f.data_fim >= data_input)
+      and exists (
+        select 1 from public.horarios_aluno g
+        join public.horarios h2 on h2.id = g.horario_id and h2.ativo and h2.id <> turma.id
+        where g.aluno_id::uuid = f.aluno_id::uuid
+          and (g.data_fim is null or g.data_fim >= nova_data_input)
+          and (h2.vigente_ate is null or h2.vigente_ate >= nova_data_input)
+          and h2.dia_semana = novo_dia
+          and (h2.hora_inicio, h2.hora_inicio + make_interval(mins => h2.duracao_min))
+              overlaps (nova_hora_input, nova_hora_input + make_interval(mins => nova_duracao_input))
+      );
+  if conflito is not null then
+    raise exception 'Conflito com outro horario fixo de: %', conflito using errcode = 'LK002';
+  end if;
+
+  if escopo_input = 'todas' or turma.vigente_desde >= data_input then
+    update public.horarios set
+      dia_semana = novo_dia, hora_inicio = nova_hora_input, duracao_min = nova_duracao_input,
+      vigente_desde = least(vigente_desde + delta, vigente_desde), updated_at = now()
+    where id = turma.id
+    returning * into alvo;
+    update public.horarios_aluno set dia_semana = alvo.dia_semana::text, horario = to_char(alvo.hora_inicio, 'HH24:MI')
+      where horario_id = turma.id;
+    modo := 'todas';
+  else
+    insert into public.horarios (
+      dia_semana, hora_inicio, duracao_min, professor_id, modalidade_id, capacidade,
+      vigente_desde, vigente_ate, origem, observacao
+    ) values (
+      novo_dia, nova_hora_input, nova_duracao_input, turma.professor_id, turma.modalidade_id, turma.capacidade,
+      nova_data_input, turma.vigente_ate, 'manual', turma.observacao
+    )
+    returning * into alvo;
+
+    update public.horarios set vigente_ate = data_input - 1, updated_at = now() where id = turma.id;
+
+    for fx in
+      select * from public.horarios_aluno
+        where horario_id = turma.id and (data_fim is null or data_fim >= data_input)
+    loop
+      fixos_alterados := fixos_alterados || jsonb_build_object(
+        'id', fx.id::text, 'horario_id', fx.horario_id, 'data_inicio', fx.data_inicio, 'data_fim', fx.data_fim);
+
+      if fx.data_inicio is not null and fx.data_inicio >= data_input then
+        update public.horarios_aluno set horario_id = alvo.id,
+          dia_semana = alvo.dia_semana::text, horario = to_char(alvo.hora_inicio, 'HH24:MI'),
+          data_inicio = greatest(fx.data_inicio, nova_data_input), updated_at = now()
+        where id = fx.id;
+      else
+        update public.horarios_aluno set data_fim = data_input - 1, updated_at = now() where id = fx.id;
+        insert into public.horarios_aluno (aluno_id, horario_id, dia_semana, horario, data_inicio, data_fim, professor_id)
+          values (fx.aluno_id, alvo.id, alvo.dia_semana::text, to_char(alvo.hora_inicio, 'HH24:MI'),
+                  nova_data_input, fx.data_fim, fx.professor_id)
+          returning id::text into novo_fixo_id;
+        fixos_inseridos := fixos_inseridos || to_jsonb(novo_fixo_id);
+      end if;
+    end loop;
+    modo := 'seguintes';
+  end if;
+
+  -- Reposicoes/avulsas/experimentais futuras acompanham a turma
+  select coalesce(array_agg(a.id), '{}'),
+         coalesce(jsonb_agg(jsonb_build_object('id', a.id, 'horario_id', a.horario_id, 'data', a.data,
+                                                'hora', a.hora, 'duracao_min', a.duracao_min)), '[]'::jsonb)
+    into ids, linhas
+    from public.agenda a
+    where a.horario_id = turma.id and a.data >= data_input and a.tipo <> 'fixo' and a.status = 'agendado';
+
+  update public.agenda set
+    horario_id = alvo.id, data = data + delta, hora = nova_hora_input, duracao_min = nova_duracao_input, updated_at = now()
+  where id = any (ids);
+
+  insert into public.agenda_movimentos (tipo, dados)
+    values (modo, jsonb_build_object(
+      'turma_antes', to_jsonb(turma), 'alvo_id', alvo.id, 'linhas', linhas,
+      'fixos_alterados', fixos_alterados, 'fixos_inseridos', fixos_inseridos,
+      'inicio', least(data_input, nova_data_input)))
+    returning id into movimento;
+
+  -- Regenera as proximas semanas ja no novo horario
+  perform public.sincronizar_agenda(least(data_input, nova_data_input), least(data_input, nova_data_input) + 56);
+
+  return jsonb_build_object('movimento_id', movimento, 'horario_id', alvo.id, 'movidos', coalesce(array_length(ids, 1), 0), 'modo', modo);
+end;
+$$;
+
+create or replace function public.desfazer_movimento(movimento_id_input uuid)
+returns jsonb
+language plpgsql
+as $$
+declare
+  m public.agenda_movimentos%rowtype;
+  antes public.horarios;
+  alvo_id uuid;
+  l jsonb;
+  inicio date;
+begin
+  select * into m from public.agenda_movimentos where id = movimento_id_input for update;
+  if not found then
+    raise exception 'Movimentacao nao encontrada' using errcode = 'P0002';
+  end if;
+  if m.desfeito_em is not null then
+    raise exception 'Esta movimentacao ja foi desfeita' using errcode = 'LK006';
+  end if;
+  if m.criado_em < now() - interval '30 minutes' then
+    raise exception 'Tempo para desfazer esgotado' using errcode = 'LK006';
+  end if;
+
+  antes := jsonb_populate_record(null::public.horarios, m.dados -> 'turma_antes');
+  alvo_id := (m.dados ->> 'alvo_id')::uuid;
+
+  -- Nada movido pode ter sido marcado depois
+  if exists (
+    select 1 from public.agenda a
+    join jsonb_array_elements(m.dados -> 'linhas') x on (x ->> 'id')::uuid = a.id
+    where a.status <> 'agendado'
+  ) then
+    raise exception 'Algum aluno desta aula ja foi marcado; desfaca a marcacao antes' using errcode = 'LK006';
+  end if;
+
+  if m.tipo = 'seguintes' and exists (
+    select 1 from public.agenda a
+    where a.horario_id = alvo_id and a.status in ('presente', 'falta', 'falta_justificada')
+  ) then
+    raise exception 'A nova turma ja tem presencas marcadas' using errcode = 'LK006';
+  end if;
+
+  -- Devolve os agendamentos movidos
+  for l in select * from jsonb_array_elements(m.dados -> 'linhas') loop
+    update public.agenda set
+      horario_id = (l ->> 'horario_id')::uuid, data = (l ->> 'data')::date,
+      hora = (l ->> 'hora')::time, duracao_min = (l ->> 'duracao_min')::integer, updated_at = now()
+    where id = (l ->> 'id')::uuid;
+  end loop;
+
+  if m.tipo = 'unica' or m.tipo = 'todas' then
+    update public.horarios set
+      dia_semana = antes.dia_semana, hora_inicio = antes.hora_inicio, duracao_min = antes.duracao_min,
+      vigente_desde = antes.vigente_desde, vigente_ate = antes.vigente_ate, updated_at = now()
+    where id = antes.id;
+    if m.tipo = 'todas' then
+      update public.horarios_aluno set dia_semana = antes.dia_semana::text, horario = to_char(antes.hora_inicio, 'HH24:MI')
+        where horario_id = antes.id;
+    end if;
+  elsif m.tipo = 'esta' then
+    delete from public.bloqueios where id = (m.dados ->> 'bloqueio_id')::uuid;
+    delete from public.horarios where id = alvo_id
+      and not exists (select 1 from public.agenda a where a.horario_id = alvo_id);
+    update public.horarios set ativo = false where id = alvo_id;
+  elsif m.tipo = 'seguintes' then
+    delete from public.agenda a
+      where a.horario_id = alvo_id and a.tipo = 'fixo' and a.status = 'agendado' and a.aula_id is null;
+    delete from public.horarios_aluno f
+      where f.id::text in (select jsonb_array_elements_text(m.dados -> 'fixos_inseridos'));
+    for l in select * from jsonb_array_elements(m.dados -> 'fixos_alterados') loop
+      update public.horarios_aluno set
+        horario_id = (l ->> 'horario_id')::uuid,
+        dia_semana = antes.dia_semana::text, horario = to_char(antes.hora_inicio, 'HH24:MI'),
+        data_inicio = (l ->> 'data_inicio')::date, data_fim = (l ->> 'data_fim')::date, updated_at = now()
+      where id::text = l ->> 'id';
+    end loop;
+    update public.horarios set vigente_ate = antes.vigente_ate, updated_at = now() where id = antes.id;
+    delete from public.horarios where id = alvo_id
+      and not exists (select 1 from public.agenda a where a.horario_id = alvo_id);
+    update public.horarios set ativo = false where id = alvo_id;
+  end if;
+
+  update public.agenda_movimentos set desfeito_em = now() where id = m.id;
+
+  inicio := coalesce((m.dados ->> 'inicio')::date, public.agenda_hoje());
+  if m.tipo in ('seguintes', 'todas') then
+    perform public.sincronizar_agenda(inicio, inicio + 56);
+  end if;
+
+  return jsonb_build_object('desfeito', true);
+end;
+$$;
+
 -- ---------------------------------------------------------------------
 -- Profissionais
 -- ---------------------------------------------------------------------
@@ -198,7 +897,7 @@ end $$;
 
 -- Presenca/falta/credito passam a tratar o tipo 'aula' igual a 'fixo'
 create or replace function public.agenda_aplicar_status(
-  agenda_id_input bigint,
+  agenda_id_input uuid,
   status_input text,
   gerar_credito_input boolean default true
 )
@@ -489,7 +1188,7 @@ create or replace function public.conflitos_cliente(
   hora_inicio_input time,
   hora_fim_input time,
   dias_input smallint[] default null,
-  ignorar_agenda_id_input bigint default null,
+  ignorar_agenda_id_input uuid default null,
   ignorar_recorrencia_id_input uuid default null
 )
 returns text[]
@@ -608,7 +1307,7 @@ $$;
 -- Editar aula: 'esta' (so esta ocorrencia) ou 'proximas' (esta e as proximas)
 -- ---------------------------------------------------------------------
 create or replace function public.editar_aula_cliente(
-  agenda_id_input bigint,
+  agenda_id_input uuid,
   escopo_input text,
   data_input date,
   hora_inicio_input time,
@@ -712,7 +1411,7 @@ $$;
 -- ---------------------------------------------------------------------
 -- Excluir aula: 'esta' ou 'proximas'
 -- ---------------------------------------------------------------------
-create or replace function public.excluir_aula_cliente(agenda_id_input bigint, escopo_input text default 'esta')
+create or replace function public.excluir_aula_cliente(agenda_id_input uuid, escopo_input text default 'esta')
 returns jsonb
 language plpgsql
 as $$
