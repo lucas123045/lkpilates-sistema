@@ -50,7 +50,7 @@ export class ErroAgenda extends Error {
   }
 }
 
-function falhar(error: { message: string; code?: string }): never {
+export function falhar(error: { message: string; code?: string }): never {
   // PGRST202 = funcao inexistente, PGRST205 = tabela inexistente: migrations da agenda nao aplicadas
   if (error.code === 'PGRST202' || error.code === 'PGRST205') {
     throw new ErroAgenda(
@@ -61,13 +61,13 @@ function falhar(error: { message: string; code?: string }): never {
   throw new ErroAgenda(error.message, CODIGOS[error.code ?? ''] ?? 'DESCONHECIDO')
 }
 
-async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {
+export async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(nome, args)
   if (error) falhar(error)
   return data as T
 }
 
-const CAMPOS_ALUNO = 'id, nome, ativo, plano, frequencia_semanal, aulas_restantes, telefone, professor_id'
+const CAMPOS_ALUNO = 'id, nome, ativo, plano, frequencia_semanal, aulas_restantes, telefone, professor_id, vencimento'
 
 /* ======================= Leitura por periodo ======================= */
 
@@ -82,6 +82,7 @@ export async function carregarPeriodo(inicio: string, fim: string): Promise<Dado
       .select(`*, aluno:alunos!agenda_aluno_id_fkey(${CAMPOS_ALUNO})`)
       .gte('data', inicio)
       .lte('data', fim)
+      .eq('excluida', false)
       .order('hora'),
     supabase.from('professores').select('*').order('nome'),
     supabase.from('modalidades').select('*').order('nome'),
@@ -520,4 +521,65 @@ export async function proximasAulasProfessor(professorId: string, aPartirDe: str
 export async function atualizarTurma(horarioId: string, dados: { capacidade?: number; modalidade_id?: string | null }) {
   const { error } = await supabase.from('horarios').update({ ...dados, updated_at: new Date().toISOString() }).eq('id', horarioId)
   if (error) falhar(error)
+}
+
+/* ======================= Agenda por cliente (recorrencia) ======================= */
+
+export type EscopoAula = 'esta' | 'proximas'
+
+export type DadosAula = {
+  alunoId: string | null
+  nomeLivre?: string
+  telefoneLivre?: string
+  data: string
+  horaInicio: string
+  horaFim: string
+  dias?: number[] | null
+  profissionalId?: string | null
+  servicoId?: string | null
+  cor?: string | null
+  observacao?: string
+}
+
+export function criarAulaCliente(a: DadosAula, forcar = false) {
+  return rpc<{ recorrencia_id?: string; agenda_id?: number; conflitos: string[] }>('criar_aula_cliente', {
+    aluno_id_input: a.alunoId,
+    nome_livre_input: a.nomeLivre ?? null,
+    telefone_livre_input: a.telefoneLivre ?? null,
+    data_input: a.data,
+    hora_inicio_input: a.horaInicio,
+    hora_fim_input: a.horaFim,
+    dias_input: a.dias?.length ? a.dias : null,
+    profissional_id_input: a.profissionalId ?? null,
+    servico_id_input: a.servicoId ?? null,
+    cor_input: a.cor ?? null,
+    observacao_input: a.observacao ?? null,
+    forcar_input: forcar
+  })
+}
+
+export function editarAulaCliente(agendaId: number, escopo: EscopoAula, a: Omit<DadosAula, 'alunoId' | 'nomeLivre' | 'telefoneLivre'>, forcar = false) {
+  return rpc<{ escopo: string; conflitos: string[] }>('editar_aula_cliente', {
+    agenda_id_input: agendaId,
+    escopo_input: escopo,
+    data_input: a.data,
+    hora_inicio_input: a.horaInicio,
+    hora_fim_input: a.horaFim,
+    dias_input: a.dias?.length ? a.dias : null,
+    profissional_id_input: a.profissionalId ?? null,
+    servico_id_input: a.servicoId ?? null,
+    cor_input: a.cor ?? null,
+    observacao_input: a.observacao ?? null,
+    forcar_input: forcar
+  })
+}
+
+export function excluirAulaCliente(agendaId: number, escopo: EscopoAula) {
+  return rpc<{ excluidas: number }>('excluir_aula_cliente', { agenda_id_input: agendaId, escopo_input: escopo })
+}
+
+export async function carregarRecorrencia(id: string) {
+  const { data, error } = await supabase.from('recorrencias').select('*').eq('id', id).maybeSingle()
+  if (error) falhar(error)
+  return data as { id: string; dias_semana: number[]; hora_inicio: string; hora_fim: string; data_inicio: string; data_fim: string | null } | null
 }

@@ -14,7 +14,7 @@ describe('seguranca das migrations', () => {
     `)
     await aplicarMigrations(db)
     expect((await um(db, 'select count(*)::int n from horarios')).n).toBe(1)
-    expect((await um(db, 'select count(*)::int n from modalidades')).n).toBe(4)
+    expect((await um(db, 'select count(*)::int n from modalidades')).n).toBe(5)
     expect((await um(db, 'select count(*)::int n from configuracoes_estudio')).n).toBe(1)
     expect((await um(db, 'select count(*)::int n from alunos')).n).toBe(1)
   })

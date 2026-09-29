@@ -1,54 +1,45 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarCheck, CalendarDays, ClipboardList, LineChart, UsersRound } from 'lucide-react'
+import { BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardList, LineChart, Receipt, Tag, UserRound, UsersRound } from 'lucide-react'
+import PageHeader from '@/app/components/shell/PageHeader'
+import { podeAcessar, useUsuario } from '@/app/components/shell/Usuario'
+
+const ATALHOS = [
+  { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays },
+  { href: '/clientes', rotulo: 'Clientes', icone: UsersRound },
+  { href: '/financeiro/entradas', rotulo: 'Entradas', icone: CircleDollarSign },
+  { href: '/financeiro/saidas', rotulo: 'Saídas', icone: Receipt },
+  { href: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 },
+  { href: '/planos', rotulo: 'Planos', icone: ClipboardList },
+  { href: '/servicos', rotulo: 'Tipos de Serviço', icone: Tag },
+  { href: '/profissionais', rotulo: 'Profissionais', icone: UserRound },
+  { href: '/empresa', rotulo: 'Minha Empresa', icone: Building2 },
+  { href: '/aulas', rotulo: 'Registro de aulas', icone: CalendarCheck },
+  { href: '/resultados', rotulo: 'Resultados', icone: LineChart }
+]
 
 export default function Dashboard() {
+  const usuario = useUsuario()
   return (
-    <div className="dashboard-container">
-      {/* LOGO */}
-      <img
-        src="/logo-lk-pilates.png"
-        alt="LK Pilates"
-        className="dashboard-logo"
-      />
-
-      {/* TÍTULO */}
-      <h1 className="dashboard-title">
-        Painel de Controle
-      </h1>
-
-      <p className="dashboard-subtitle">
-        Gerenciamento completo do estúdio <b>LK Pilates</b>
-      </p>
-
-      {/* BOTÕES */}
-      <div className="dashboard-actions">
-        <Link href="/agenda" className="dashboard-card">
-          <CalendarDays size={26} strokeWidth={1.75} />
-          <span>Agenda de hoje</span>
-        </Link>
-
-        <Link href="/alunos" className="dashboard-card">
-          <UsersRound size={26} strokeWidth={1.75} />
-          <span>Cadastro de Alunos</span>
-        </Link>
-
-        <Link href="/aulas" className="dashboard-card">
-          <CalendarCheck size={26} strokeWidth={1.75} />
-          <span>Registro de Aulas</span>
-        </Link>
-
-        <Link href="/relatorios" className="dashboard-card">
-          <ClipboardList size={26} strokeWidth={1.75} />
-          <span>Relatórios</span>
-        </Link>
-
-        <Link href="/resultados" className="dashboard-card">
-          <LineChart size={26} strokeWidth={1.75} />
-          <span>Resultados</span>
-        </Link>
+    <>
+      <PageHeader trilha={[{ rotulo: 'Início' }]} />
+      <div className="ph-corpo">
+        <div className="painel" style={{ padding: '28px 20px' }}>
+          <h1 className="dashboard-title" style={{ marginBottom: 4 }}>Painel de Controle</h1>
+          <p className="dashboard-subtitle">
+            Gerenciamento completo do estúdio <b>{usuario.estudio}</b>
+          </p>
+          <div className="dashboard-actions">
+            {ATALHOS.filter(a => podeAcessar(usuario.funcao, a.href)).map(({ href, rotulo, icone: Icone }) => (
+              <Link key={href} href={href} className="dashboard-card">
+                <Icone size={26} strokeWidth={1.75} />
+                <span>{rotulo}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

@@ -246,6 +246,7 @@ export const ROTULO_STATUS: Record<StatusAgendamento, string> = {
 
 export const ROTULO_TIPO: Record<TipoAgendamento, string> = {
   fixo: 'Fixo',
+  aula: 'Aula',
   reposicao: 'Reposição',
   experimental: 'Experimental',
   avulsa: 'Avulsa'

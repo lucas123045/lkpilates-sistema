@@ -1,0 +1,94 @@
+.rel-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.rel-kpis .kpi {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+  min-height: 0;
+}
+
+.rel-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.rel-card {
+  margin-bottom: 0;
+}
+
+.rel-card.largo {
+  grid-column: 1 / -1;
+}
+
+.rel-card-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px 4px;
+}
+
+.rel-card-topo h3 {
+  font-size: 15px;
+}
+
+.rel-card-topo p {
+  font-size: 12.5px;
+  color: var(--ink-500);
+  margin-top: 2px;
+}
+
+.rel-plot {
+  padding: 8px 12px 14px 4px;
+}
+
+.rel-vazio {
+  padding: 24px 18px;
+  color: var(--ink-500);
+  font-size: 14px;
+}
+
+.rel-dica {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--ink-700);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rel-dica strong {
+  color: var(--ink-900);
+}
+
+.rel-dica i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.rel-abas {
+  margin: 20px 0 16px;
+}
+
+@media (max-width: 900px) {
+  .rel-grade {
+    grid-template-columns: 1fr;
+  }
+
+  .rel-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}

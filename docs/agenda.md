@@ -9,7 +9,8 @@ Nada disto foi aplicado no banco ainda. Ordem:
    1. `supabase/migrations/202609260001_agenda_estrutura.sql`
    2. `supabase/migrations/202609260002_agenda_funcoes.sql`
    3. `supabase/migrations/202609260003_agenda_conversao_horarios.sql`
-   4. `supabase/migrations/202609270001_agenda_calendario.sql` (arrastar/redimensionar, criar aula, desfazer)
+   4. `supabase/migrations/202609270001_agenda_calendario.sql`
+   5. `supabase/migrations/202609280001_gestao_estudio.sql` (profissionais, serviços, planos, clientes, agenda por cliente com recorrência, financeiro, empresa)
 3. O passo 3 termina mostrando um resumo. Para ver o detalhe da conversão:
    ```sql
    select situacao, origem, origem_id, detalhe
@@ -75,3 +76,18 @@ Feito com FullCalendar 6 usando só plugins MIT (timegrid, daygrid, list, intera
 - Arrastar para mover e puxar a borda para mudar a duração. Em turma semanal pergunta "Somente esta aula / Esta e as seguintes / Todas as aulas". Aulas passadas ou com presença marcada não se movem. Toast com "Desfazer" (até 30 min).
 - Atalhos: `t` hoje, `j`/`k` ou setas, `d` dia, `w` semana, `m` mês, `a` programação, `x` 3 dias, `c` criar, `/` busca, `Esc` fecha.
 - Celular: swipe lateral troca o período, botão "+" flutuante, popovers viram bottom sheet, toque longo para arrastar.
+
+## Gestão do estúdio (migration 202609280001)
+
+A agenda passou a ser **por cliente** (um card por aluno), com regra de recorrência:
+
+- `recorrencias`: cliente (ou nome livre para experimental), dias da semana, das/até, profissional, serviço, cor. As aulas da semana são geradas a partir dela, sem duplicar.
+- Editar/excluir aula recorrente pergunta **Somente esta aula** / **Esta e as próximas**. Aulas passadas ou marcadas nunca mudam.
+- Presença e falta continuam debitando o pacote (tabela `aulas`), e desmarcar dentro do prazo gera crédito de reposição.
+- Conflito do mesmo cliente em horários sobrepostos gera aviso (dá para salvar mesmo assim).
+
+Outros módulos: Clientes (`alunos` + plano, vencimento, aniversário, etiquetas), Planos (criados automaticamente a partir do texto do plano de cada aluno — confira em Planos), Profissionais (função e cor), Tipos de Serviço (duração e cor), Financeiro (Entradas/Saídas), Relatórios → Gestão, Minha Empresa.
+
+**Vencimento:** ao registrar um pagamento, o vencimento avança N meses a partir do vencimento atual (ou da data do pagamento, se não houver). N é sugerido como valor ÷ preço mensal do plano e pode ser editado. Excluir o pagamento devolve o vencimento anterior.
+
+**Permissões:** o e-mail do login é procurado em Profissionais. Nível 2 vê Início, Agenda, Clientes e Registro de aulas. Sem login ou com e-mail não cadastrado: acesso total (como hoje). A restrição é da interface; o banco continua aberto à chave pública (mesmo modelo de antes).

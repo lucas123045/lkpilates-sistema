@@ -1,13 +1,13 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import SiteHeader from './components/SiteHeader'
+import AppShell from './components/shell/AppShell'
 import { FeedbackProvider } from './components/ui/Feedback'
 
 /* ================== METADATA ================== */
 
 export const metadata: Metadata = {
   title: 'LK Pilates',
-  description: 'Sistema de controle de alunos e aulas',
+  description: 'Sistema de gestão do estúdio LK Pilates',
   icons: {
     icon: '/icon.png',
     apple: '/apple-icon.png'
@@ -25,11 +25,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <FeedbackProvider>
-          <SiteHeader />
-
-          <main className="container">
-            {children}
-          </main>
+          <AppShell>{children}</AppShell>
         </FeedbackProvider>
       </body>
     </html>

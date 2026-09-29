@@ -1,11 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { formatarHora } from '@/lib/agenda/datas'
-import { horarioBloqueado, ocupacao } from '@/lib/agenda/regras'
-import { buscarAlunos, carregarPeriodo } from '@/lib/agenda/servico'
-import type { AlunoResumo, DadosPeriodo } from '@/lib/agenda/tipos'
-import { agendamentosDaTurma, turmasDoDia } from '../util'
+import { buscarAlunos } from '@/lib/agenda/servico'
+import type { AlunoResumo } from '@/lib/agenda/tipos'
 
 function useAlunosBusca(termo: string, apenasAtivos = false) {
   const [alunos, setAlunos] = useState<AlunoResumo[]>([])
@@ -74,83 +71,6 @@ export function SeletorAluno({
               <span className={`ui-chip ${a.ativo ? '' : 'ui-chip-vermelho'}`}>{a.ativo ? a.plano || 'sem plano' : 'inativo'}</span>
             </button>
           ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** Escolha de data + turma com vagas (para remarcar e para lista de espera/adicionar em outro dia). */
-export function SeletorHorario({
-  dataInicial,
-  horarioSelecionado,
-  onSelecionar,
-  ignorarHorarioId,
-  permitirLotado = true
-}: {
-  dataInicial: string
-  horarioSelecionado: { data: string; horarioId: string } | null
-  onSelecionar: (s: { data: string; horarioId: string; lotado: boolean } | null) => void
-  ignorarHorarioId?: { data: string; horarioId: string }
-  permitirLotado?: boolean
-}) {
-  const [data, setData] = useState(dataInicial)
-  const [dados, setDados] = useState<DadosPeriodo | null>(null)
-  const [erro, setErro] = useState('')
-
-  useEffect(() => {
-    let vivo = true
-    setDados(null)
-    setErro('')
-    carregarPeriodo(data, data)
-      .then(d => vivo && setDados(d))
-      .catch(e => vivo && setErro(e.message))
-    return () => {
-      vivo = false
-    }
-  }, [data])
-
-  const turmas = dados ? turmasDoDia(dados, data).filter(h => h.ativo) : []
-
-  return (
-    <div>
-      <div className="ui-campo">
-        <label className="label">Data</label>
-        <input
-          className="input"
-          type="date"
-          value={data}
-          onChange={e => {
-            setData(e.target.value)
-            onSelecionar(null)
-          }}
-        />
-      </div>
-      {erro && <div className="ui-alerta ui-alerta-erro">{erro}</div>}
-      {!dados && !erro && <div className="ui-skeleton" style={{ height: 64 }} />}
-      {dados && !turmas.length && <p style={{ color: 'var(--ink-500)' }}>Nenhuma turma neste dia.</p>}
-      {dados && turmas.length > 0 && (
-        <div className="ag-opcoes-horario">
-          {turmas.map(h => {
-            const bloqueio = horarioBloqueado(dados.bloqueios, h.id, data)
-            const oc = ocupacao(h.capacidade, agendamentosDaTurma(dados, h.id, data), !!bloqueio)
-            const mesmo = ignorarHorarioId?.data === data && ignorarHorarioId?.horarioId === h.id
-            const desabilitado = !!bloqueio || mesmo || (!permitirLotado && oc.nivel === 'lotado')
-            const sel = horarioSelecionado?.data === data && horarioSelecionado?.horarioId === h.id
-            return (
-              <button
-                key={h.id}
-                className={`ag-opcao-horario${sel ? ' selecionado' : ''}`}
-                disabled={desabilitado}
-                onClick={() => onSelecionar({ data, horarioId: h.id, lotado: oc.nivel === 'lotado' })}
-              >
-                <strong>{formatarHora(h.hora_inicio)}</strong>
-                <span className={`ag-ocupacao ag-nivel-${oc.nivel}`} style={{ fontSize: 11.5, padding: '2px 7px' }}>
-                  {bloqueio ? 'Bloqueado' : mesmo ? 'Atual' : `${oc.vagas} vaga${oc.vagas === 1 ? '' : 's'}`}
-                </span>
-              </button>
-            )
-          })}
         </div>
       )}
     </div>

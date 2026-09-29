@@ -6,7 +6,7 @@ export type StatusAgendamento =
   | 'desmarcado'
   | 'cancelado_estudio'
 
-export type TipoAgendamento = 'fixo' | 'reposicao' | 'experimental' | 'avulsa'
+export type TipoAgendamento = 'fixo' | 'aula' | 'reposicao' | 'experimental' | 'avulsa'
 
 export type OrigemProfessor = 'dia' | 'aluno' | 'horario'
 
@@ -51,6 +51,7 @@ export type AlunoResumo = {
   aulas_restantes: number
   telefone: string | null
   professor_id?: string | null
+  vencimento?: string | null
 }
 
 export type Agendamento = {
@@ -73,6 +74,11 @@ export type Agendamento = {
   credito_usado_id: string | null
   cancelamento_motivo: string | null
   remarcado_de_id: number | null
+  recorrencia_id?: string | null
+  servico_id?: string | null
+  cor?: string | null
+  excecao?: boolean
+  excluida?: boolean
   aluno?: AlunoResumo | null
 }
 
