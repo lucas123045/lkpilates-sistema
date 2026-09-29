@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardList, LineChart, Receipt, Tag, UserRound, UsersRound } from 'lucide-react'
+import { ArrowRight, BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardCheck, ClipboardList, LineChart, Receipt, Tag, UserRound, UsersRound } from 'lucide-react'
 import PageHeader from '@/app/components/shell/PageHeader'
 import { podeAcessar, useUsuario } from '@/app/components/shell/Usuario'
 
@@ -30,7 +30,15 @@ export default function Dashboard() {
           <p className="dashboard-subtitle">
             Gerenciamento completo do estúdio <b>{usuario.estudio}</b>
           </p>
-          <div className="dashboard-actions">
+          <Link href="/relatorio-alunos" className="dash-destaque">
+            <span className="dash-destaque-icone"><ClipboardCheck size={30} /></span>
+            <span className="dash-destaque-texto">
+              <strong>Relatório de alunos</strong>
+              <span>Presenças, faltas, reposições, pacote de aulas e histórico de cada aluno</span>
+            </span>
+            <ArrowRight size={22} className="dash-destaque-seta" />
+          </Link>
+          <div className="dashboard-actions dash-atalhos">
             {ATALHOS.filter(a => podeAcessar(usuario.funcao, a.href)).map(({ href, rotulo, icone: Icone }) => (
               <Link key={href} href={href} className="dashboard-card">
                 <Icone size={26} strokeWidth={1.75} />

@@ -915,3 +915,114 @@ a.ficha-linha:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------- Destaque: Relatorio de alunos ---------------- */
+.sb-item.destaque {
+  background: rgba(249, 115, 22, 0.14);
+  color: #fff;
+  margin: 4px 0;
+}
+
+.sb-item.destaque svg {
+  color: var(--brand-orange);
+}
+
+.sb-item.destaque:hover {
+  background: rgba(249, 115, 22, 0.24);
+}
+
+.dash-destaque {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto 20px;
+  padding: 22px 24px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, var(--brand-orange) 0%, var(--brand-orange-dark) 100%);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(234, 88, 12, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dash-destaque:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(234, 88, 12, 0.34);
+}
+
+.dash-destaque-icone {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dash-destaque-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-destaque-texto strong {
+  font-size: 20px;
+}
+
+.dash-destaque-texto span {
+  font-size: 14px;
+  opacity: 0.92;
+}
+
+.dash-destaque-seta {
+  flex-shrink: 0;
+}
+
+.dash-atalhos {
+  margin: 0 auto;
+}
+
+.relatorio-alunos {
+  padding: 4px 0;
+}
+
+@media (max-width: 900px) {
+  .dash-destaque {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .dash-destaque-texto strong {
+    font-size: 18px;
+  }
+
+  .dash-destaque-texto span {
+    font-size: 13px;
+  }
+
+  .dash-atalhos {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .dash-atalhos .dashboard-card {
+    padding: 16px 10px;
+    font-size: 14px;
+    gap: 8px;
+  }
+}
+
+/* A tela antiga traz a propria faixa com logo; aqui o topo novo ja identifica a pagina */
+.relatorio-alunos .topo {
+  display: none;
+}
+
+.relatorio-alunos > .container {
+  padding-top: 20px;
+}

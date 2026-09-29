@@ -7,6 +7,7 @@ import {
   BarChart3,
   Building2,
   CalendarCheck,
+  ClipboardCheck,
   CalendarDays,
   ChevronDown,
   CircleDollarSign,
@@ -25,10 +26,11 @@ import {
 import { podeAcessar, UsuarioProvider, useUsuario } from './Usuario'
 import './shell.css'
 
-type Item = { href: string; rotulo: string; icone: typeof LayoutGrid; filhos?: { href: string; rotulo: string }[] }
+type Item = { href: string; rotulo: string; icone: typeof LayoutGrid; destaque?: boolean; filhos?: { href: string; rotulo: string }[] }
 
 const MENU: Item[] = [
   { href: '/dashboard', rotulo: 'Início', icone: LayoutGrid },
+  { href: '/relatorio-alunos', rotulo: 'Relatório de alunos', icone: ClipboardCheck, destaque: true },
   { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '/clientes', rotulo: 'Clientes', icone: UsersRound },
   {
@@ -127,7 +129,7 @@ function Moldura({ caminho, children }: { caminho: string; children: React.React
     }
     return (
       <li key={item.href}>
-        <Link href={item.href} className={`sb-item${ativo(item.href) ? ' ativo' : ''}`} title={item.rotulo}>
+        <Link href={item.href} className={`sb-item${ativo(item.href) ? ' ativo' : ''}${item.destaque ? ' destaque' : ''}`} title={item.rotulo}>
           <Icone size={20} />
           <span className="sb-rotulo">{item.rotulo}</span>
         </Link>
