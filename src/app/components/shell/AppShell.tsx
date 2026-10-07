@@ -23,6 +23,7 @@ import {
   UsersRound,
   X
 } from 'lucide-react'
+import { garantirRolagemLivre, useBloqueioRolagem } from '../ui/bloqueioRolagem'
 import { podeAcessar, UsuarioProvider, useUsuario } from './Usuario'
 import './shell.css'
 
@@ -80,7 +81,14 @@ function Moldura({ caminho, children }: { caminho: string; children: React.React
     }
   }, [])
 
-  useEffect(() => setGaveta(false), [caminho])
+  useEffect(() => {
+    setGaveta(false)
+    // rede de seguranca: trocou de pagina sem nada aberto, a rolagem volta
+    garantirRolagemLivre()
+  }, [caminho])
+
+  // menu aberto no celular: o fundo nao rola
+  useBloqueioRolagem(gaveta)
 
   function alternarRecolhida() {
     setRecolhida(r => {

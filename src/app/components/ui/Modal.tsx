@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { useBloqueioRolagem } from './bloqueioRolagem'
 import './ui.css'
 
 type Props = {
@@ -16,17 +17,18 @@ type Props = {
 
 /** Modal simples; no celular vira uma "gaveta" que sobe de baixo. */
 export default function Modal({ aberto, titulo, subtitulo, onFechar, children, rodape, largura = 520 }: Props) {
+  // onFechar costuma ser funcao inline: guardado num ref para o efeito nao rodar a cada render
+  const fechar = useRef(onFechar)
+  fechar.current = onFechar
+
+  useBloqueioRolagem(aberto)
+
   useEffect(() => {
     if (!aberto) return
-    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && onFechar()
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && fechar.current()
     document.addEventListener('keydown', tecla)
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', tecla)
-      document.body.style.overflow = overflow
-    }
-  }, [aberto, onFechar])
+    return () => document.removeEventListener('keydown', tecla)
+  }, [aberto])
 
   if (!aberto) return null
 

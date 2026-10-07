@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { useBloqueioRolagem } from './bloqueioRolagem'
 import './ui.css'
 
 export type Ancora = { x: number; y: number; largura?: number; altura?: number }
@@ -42,10 +43,16 @@ export default function Popover({ ancora, onFechar, children, largura = 380, cab
     setPos({ left, top })
   }, [ancora, children])
 
+  const fechar = useRef(onFechar)
+  fechar.current = onFechar
+
+  // no celular vira bottom sheet sobre a pagina: trava a rolagem do fundo
+  useBloqueioRolagem(mobile)
+
   useEffect(() => {
-    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && onFechar()
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && fechar.current()
     const fora = (e: MouseEvent) => {
-      if (caixa.current && !caixa.current.contains(e.target as Node)) onFechar()
+      if (caixa.current && !caixa.current.contains(e.target as Node)) fechar.current()
     }
     document.addEventListener('keydown', tecla)
     // adia para nao capturar o proprio clique que abriu o popover
@@ -55,7 +62,7 @@ export default function Popover({ ancora, onFechar, children, largura = 380, cab
       document.removeEventListener('keydown', tecla)
       document.removeEventListener('mousedown', fora)
     }
-  }, [onFechar])
+  }, [])
 
   const conteudo = (
     <div
