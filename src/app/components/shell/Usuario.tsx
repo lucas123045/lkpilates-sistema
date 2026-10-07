@@ -2,15 +2,18 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { Nivel } from '@/lib/acesso'
 
-export type Funcao = 'administrador' | 'nivel2'
+export { podeAcessar, paginaInicial } from '@/lib/acesso'
 
 export type Usuario = {
   carregado: boolean
   logado: boolean
+  id: string | null
   nome: string | null
   email: string | null
-  funcao: Funcao
+  /** null = sem cadastro em usuarios_acesso ou inativo: sem acesso */
+  nivel: Nivel | null
   profissionalId: string | null
   estudio: string
 }
@@ -18,20 +21,17 @@ export type Usuario = {
 const PADRAO: Usuario = {
   carregado: false,
   logado: false,
+  id: null,
   nome: null,
   email: null,
-  funcao: 'administrador',
+  nivel: null,
   profissionalId: null,
   estudio: 'LK Pilates'
 }
 
 const Contexto = createContext<Usuario>(PADRAO)
 
-/**
- * Identifica quem esta usando o sistema: o e-mail do login e procurado no
- * cadastro de Profissionais para saber o nome e a funcao.
- * Sem login (uso atual do estudio) ou com e-mail nao cadastrado: acesso de administrador.
- */
+/** Identifica quem esta usando o sistema e o nivel de acesso (tabela usuarios_acesso). */
 export function UsuarioProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario>(PADRAO)
 
@@ -39,30 +39,36 @@ export function UsuarioProvider({ children }: { children: React.ReactNode }) {
     let vivo = true
 
     async function carregar() {
-      const [{ data: sessao }, { data: empresa }] = await Promise.all([
-        supabase.auth.getSession(),
-        supabase.from('empresa').select('nome').eq('id', 1).maybeSingle()
-      ])
-      const email = sessao.session?.user.email ?? null
-      let prof: { id: string; nome: string; funcao: Funcao } | null = null
-      if (email) {
-        const { data } = await supabase.from('professores').select('id, nome, funcao').ilike('email', email).maybeSingle()
-        prof = data as typeof prof
+      const { data: sessao } = await supabase.auth.getSession()
+      const user = sessao.session?.user ?? null
+      let acesso: { nome: string; nivel: Nivel; ativo: boolean; profissional_id: string | null } | null = null
+      let estudio: string | null = null
+      if (user) {
+        const [{ data }, { data: nome }] = await Promise.all([
+          supabase.from('usuarios_acesso').select('nome, nivel, ativo, profissional_id').eq('user_id', user.id).maybeSingle(),
+          supabase.rpc('nome_estudio')
+        ])
+        acesso = data as typeof acesso
+        estudio = nome as string | null
       }
       if (!vivo) return
+      const email = user?.email ?? null
       setUsuario({
         carregado: true,
-        logado: !!email,
+        logado: !!user,
+        id: user?.id ?? null,
         email,
-        nome: prof?.nome ?? (email ? email.split('@')[0] : null),
-        funcao: prof?.funcao ?? 'administrador',
-        profissionalId: prof?.id ?? null,
-        estudio: empresa?.nome ?? 'LK Pilates'
+        nome: acesso?.nome ?? (email ? email.split('@')[0] : null),
+        nivel: acesso?.ativo ? acesso.nivel : null,
+        profissionalId: acesso?.profissional_id ?? null,
+        estudio: estudio ?? 'LK Pilates'
       })
     }
 
     carregar().catch(() => vivo && setUsuario(u => ({ ...u, carregado: true })))
-    const { data: escuta } = supabase.auth.onAuthStateChange(() => carregar().catch(() => {}))
+    const { data: escuta } = supabase.auth.onAuthStateChange(evento => {
+      if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT' || evento === 'USER_UPDATED') carregar().catch(() => {})
+    })
     return () => {
       vivo = false
       escuta.subscription.unsubscribe()
@@ -76,10 +82,8 @@ export function useUsuario() {
   return useContext(Contexto)
 }
 
-/** Rotas que so o administrador acessa (Nivel 2 ve agenda e clientes, sem financeiro). */
-export const ROTAS_ADMIN = ['/financeiro', '/relatorios', '/resultados', '/planos', '/servicos', '/profissionais', '/empresa']
-
-export function podeAcessar(funcao: Funcao, caminho: string) {
-  if (funcao === 'administrador') return true
-  return !ROTAS_ADMIN.some(r => caminho === r || caminho.startsWith(r + '/'))
+/** Encerra a sessao e volta para o login (recarrega a pagina para limpar o estado). */
+export async function sair() {
+  await supabase.auth.signOut().catch(() => {})
+  window.location.assign('/login')
 }

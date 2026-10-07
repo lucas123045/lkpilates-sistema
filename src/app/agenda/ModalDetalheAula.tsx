@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, CircleDollarSign, CircleSlash, Pencil, Repeat, RotateCcw, Trash2, UserPlus, X } from 'lucide-react'
 import Modal from '@/app/components/ui/Modal'
+import { useUsuario } from '@/app/components/shell/Usuario'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import { DIAS_SEMANA_CURTO, formatarData, formatarDataLonga, formatarHora, hojeEstudio, horaFim } from '@/lib/agenda/datas'
 import { calcularDesmarcacao, ROTULO_STATUS } from '@/lib/agenda/regras'
@@ -83,6 +84,8 @@ const COR_STATUS: Record<string, string> = {
 
 export default function ModalDetalheAula({ agendamento: a, professor, servico, configuracao, perguntarEscopo, onEditar, onFechar, onAlterado }: Props) {
   const { toast, confirmar } = useFeedback()
+  // ficha e cadastro de clientes sao do nivel 2
+  const verClientes = useUsuario().nivel === 2
   const [salvando, setSalvando] = useState(false)
   const [diasSerie, setDiasSerie] = useState<number[] | null>(null)
   const [desmarcando, setDesmarcando] = useState(false)
@@ -142,7 +145,7 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
       aberto
       onFechar={onFechar}
       titulo={
-        a.aluno_id ? (
+        a.aluno_id && verClientes ? (
           <Link href={`/clientes/${a.aluno_id}`} className="agm-nome-link">{nome}</Link>
         ) : (
           nome
@@ -258,7 +261,7 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
             <Trash2 size={15} /> Excluir
           </button>
         )}
-        {a.tipo === 'experimental' && !a.aluno_convertido_id && (
+        {verClientes && a.tipo === 'experimental' && !a.aluno_convertido_id && (
           <Link
             className="btn ui-btn-laranja"
             style={{ textDecoration: 'none' }}

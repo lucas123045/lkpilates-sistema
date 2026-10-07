@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { desfazerAula, registrarAula as registrarAulaNoBanco, dataLocalISO } from '@/lib/aulas'
 import { useRouter } from 'next/navigation'
+import { useUsuario } from '@/app/components/shell/Usuario'
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
@@ -53,6 +54,8 @@ function nomeStatus(status: Aula['status']) {
 
 export default function Relatorios() {
   const router = useRouter()
+  // backup completo e ficha do cliente: so nivel 2
+  const nivel2 = useUsuario().nivel === 2
 
   function baixarArquivo(conteudo: string, nome: string, tipo: string) {
     const blob = new Blob([conteudo], { type: tipo })
@@ -506,6 +509,7 @@ const gerarPDF = async () => {
 >
   Baixar PDF
 </button>
+{nivel2 && (
 <button
   onClick={fazerBackup}
   className="btn btn-sec"
@@ -513,6 +517,7 @@ const gerarPDF = async () => {
 >
   Backup dos dados
 </button>
+)}
 <button
   onClick={() => setMostrarDatas(v => !v)}
   className="btn btn-sec"
@@ -632,12 +637,14 @@ const gerarPDF = async () => {
           PDF aluno
         </button>
 
-        <button
-          className="btn btn-sec"
-          onClick={() => router.push(`/clientes/${aluno.id}`)}
-        >
-          Horários e agenda
-        </button>
+        {nivel2 && (
+          <button
+            className="btn btn-sec"
+            onClick={() => router.push(`/clientes/${aluno.id}`)}
+          >
+            Horários e agenda
+          </button>
+        )}
 
        <button className="btn btn-sec" onClick={() => corrigirAulas(aluno)}>
   Corrigir aulas

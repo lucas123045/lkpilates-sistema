@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardCheck, ClipboardList, LineChart, Receipt, Tag, UserRound, UsersRound } from 'lucide-react'
+import { ArrowRight, BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardCheck, ClipboardList, LineChart, Receipt, ShieldCheck, Tag, UserRound, UsersRound } from 'lucide-react'
 import PageHeader from '@/app/components/shell/PageHeader'
 import { podeAcessar, useUsuario } from '@/app/components/shell/Usuario'
 
@@ -16,7 +16,8 @@ const ATALHOS = [
   { href: '/profissionais', rotulo: 'Profissionais', icone: UserRound },
   { href: '/empresa', rotulo: 'Minha Empresa', icone: Building2 },
   { href: '/aulas', rotulo: 'Registro de aulas', icone: CalendarCheck },
-  { href: '/resultados', rotulo: 'Resultados', icone: LineChart }
+  { href: '/resultados', rotulo: 'Resultados', icone: LineChart },
+  { href: '/usuarios', rotulo: 'Usuários e acessos', icone: ShieldCheck }
 ]
 
 export default function Dashboard() {
@@ -39,7 +40,7 @@ export default function Dashboard() {
             <ArrowRight size={22} className="dash-destaque-seta" />
           </Link>
           <div className="dashboard-actions dash-atalhos">
-            {ATALHOS.filter(a => podeAcessar(usuario.funcao, a.href)).map(({ href, rotulo, icone: Icone }) => (
+            {ATALHOS.filter(a => podeAcessar(usuario.nivel, a.href)).map(({ href, rotulo, icone: Icone }) => (
               <Link key={href} href={href} className="dashboard-card">
                 <Icone size={26} strokeWidth={1.75} />
                 <span>{rotulo}</span>

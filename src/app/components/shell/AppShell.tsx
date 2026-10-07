@@ -12,19 +12,22 @@ import {
   ChevronDown,
   CircleDollarSign,
   ClipboardList,
+  KeyRound,
   LayoutGrid,
   LineChart,
   Lock,
+  LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  ShieldCheck,
   Tag,
   UserRound,
   UsersRound,
   X
 } from 'lucide-react'
 import { garantirRolagemLivre, useBloqueioRolagem } from '../ui/bloqueioRolagem'
-import { podeAcessar, UsuarioProvider, useUsuario } from './Usuario'
+import { paginaInicial, podeAcessar, sair, UsuarioProvider, useUsuario } from './Usuario'
 import './shell.css'
 
 type Item = { href: string; rotulo: string; icone: typeof LayoutGrid; destaque?: boolean; filhos?: { href: string; rotulo: string }[] }
@@ -47,7 +50,8 @@ const MENU: Item[] = [
   { href: '/planos', rotulo: 'Planos', icone: ClipboardList },
   { href: '/servicos', rotulo: 'Tipos de Serviço', icone: Tag },
   { href: '/profissionais', rotulo: 'Profissionais', icone: UserRound },
-  { href: '/empresa', rotulo: 'Minha Empresa', icone: Building2 }
+  { href: '/empresa', rotulo: 'Minha Empresa', icone: Building2 },
+  { href: '/usuarios', rotulo: 'Usuários e acessos', icone: ShieldCheck }
 ]
 
 const EXTRAS: Item[] = [
@@ -55,7 +59,7 @@ const EXTRAS: Item[] = [
   { href: '/resultados', rotulo: 'Resultados', icone: LineChart }
 ]
 
-const SEM_MOLDURA = ['/', '/login']
+const SEM_MOLDURA = ['/', '/login', '/sem-acesso']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const caminho = usePathname() ?? '/'
@@ -102,10 +106,12 @@ function Moldura({ caminho, children }: { caminho: string; children: React.React
   }
 
   const ativo = (href: string) => caminho === href || caminho.startsWith(href + '/')
-  const permitido = podeAcessar(usuario.funcao, caminho)
+  // o middleware ja barra no servidor; aqui evita mostrar a pagina errada enquanto carrega
+  const permitido = !usuario.carregado || podeAcessar(usuario.nivel, caminho)
+  const inicio = paginaInicial(usuario.nivel)
 
   function renderItem(item: Item) {
-    if (!podeAcessar(usuario.funcao, item.href)) return null
+    if (!usuario.carregado || !podeAcessar(usuario.nivel, item.href)) return null
     const Icone = item.icone
     if (item.filhos) {
       const aberto = financeiroAberto
@@ -150,7 +156,7 @@ function Moldura({ caminho, children }: { caminho: string; children: React.React
       {gaveta && <div className="sb-fundo" onClick={() => setGaveta(false)} />}
       <aside className="sb" aria-label="Menu principal">
         <div className="sb-topo">
-          <Link href="/dashboard" className="sb-marca">
+          <Link href={inicio} className="sb-marca">
             <img src="/logo-lk-pilates.png" alt="" />
             <span className="sb-rotulo">LK Pilates</span>
           </Link>
@@ -178,6 +184,12 @@ function Moldura({ caminho, children }: { caminho: string; children: React.React
               <strong>Olá{usuario.nome ? `, ${usuario.nome}` : ''}</strong>
               <span>{usuario.estudio}</span>
             </div>
+            <Link href="/minha-conta" className="topo-acao" title="Minha conta e senha" aria-label="Minha conta e senha">
+              <KeyRound size={18} />
+            </Link>
+            <button className="topo-acao" onClick={sair} title="Sair" aria-label="Sair">
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
         <main className="shell-main">
@@ -187,8 +199,8 @@ function Moldura({ caminho, children }: { caminho: string; children: React.React
             <div className="shell-bloqueado">
               <Lock size={28} />
               <h2>Acesso restrito</h2>
-              <p>Esta área é só para administradores. Fale com a responsável pelo estúdio.</p>
-              <Link href="/agenda" className="btn btn-sec">Ir para a agenda</Link>
+              <p>Seu nível de acesso não inclui esta área. Fale com a responsável pelo estúdio.</p>
+              <Link href={inicio} className="btn btn-sec">Voltar ao início</Link>
             </div>
           )}
         </main>

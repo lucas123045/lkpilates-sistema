@@ -8,7 +8,7 @@ import PageHeader from '@/app/components/shell/PageHeader'
 import { EstadoTabela, MenuAcoes, passaAtivos, SeletorCor, SelectAtivos, type FiltroAtivos } from '@/app/components/gestao/Comuns'
 import { formatarData } from '@/lib/agenda/datas'
 import { PALETA_PROFESSORES } from '@/lib/agenda/regras'
-import { inicial, ROTULO_FUNCAO } from '@/lib/gestao/regras'
+import { inicial } from '@/lib/gestao/regras'
 import { listarProfissionais, salvarProfissional } from '@/lib/gestao/servico'
 import type { Profissional } from '@/lib/gestao/tipos'
 import '@/app/components/ui/ui.css'
@@ -83,7 +83,6 @@ export default function ProfissionaisPage() {
                     <thead>
                       <tr>
                         <th>Nome</th>
-                        <th>Função</th>
                         <th className="centro">Cor na agenda</th>
                         <th className="centro">Status</th>
                         <th>Data nasc.</th>
@@ -95,9 +94,6 @@ export default function ProfissionaisPage() {
                       {visiveis.map(p => (
                         <tr key={p.id} className={`clicavel${p.ativo ? '' : ' inativo'}`} onClick={() => setEditando(p)}>
                           <td className="nome">{p.nome}</td>
-                          <td>
-                            <span className={`etiqueta ${p.funcao === 'administrador' ? 'admin' : 'nivel2'}`}>{ROTULO_FUNCAO[p.funcao]}</span>
-                          </td>
                           <td className="centro">
                             <span className="cor-bolinha" style={{ background: p.cor }} title={p.cor} />
                           </td>
@@ -175,15 +171,6 @@ function ModalProfissional({ inicial: ini, usadas, onFechar, onSalvo }: { inicia
       </div>
       <div className="ui-linha">
         <div className="ui-campo">
-          <label className="label">Função / acesso</label>
-          <select className="ui-select" value={p.funcao ?? 'nivel2'} onChange={e => set('funcao', e.target.value as Profissional['funcao'])}>
-            <option value="administrador">Administrador — vê tudo, inclusive financeiro</option>
-            <option value="nivel2">Nível 2 — agenda e clientes</option>
-          </select>
-        </div>
-      </div>
-      <div className="ui-linha">
-        <div className="ui-campo">
           <label className="label">Telefone</label>
           <input className="input" inputMode="tel" value={p.telefone ?? ''} onChange={e => set('telefone', e.target.value)} />
         </div>
@@ -193,8 +180,9 @@ function ModalProfissional({ inicial: ini, usadas, onFechar, onSalvo }: { inicia
         </div>
       </div>
       <div className="ui-campo">
-        <label className="label">E-mail de login (opcional)</label>
-        <input className="input" type="email" value={p.email ?? ''} onChange={e => set('email', e.target.value)} placeholder="Usado para identificar quem entrou no sistema" />
+        <label className="label">E-mail (opcional)</label>
+        <input className="input" type="email" value={p.email ?? ''} onChange={e => set('email', e.target.value)} />
+        <p style={{ fontSize: 12.5, color: 'var(--ink-500)', marginTop: 6 }}>Logins e níveis de acesso ficam em Usuários e acessos.</p>
       </div>
       <div className="ui-campo">
         <label className="label">Cor na agenda</label>

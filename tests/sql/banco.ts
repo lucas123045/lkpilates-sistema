@@ -15,6 +15,8 @@ export async function criarBanco(antesDasMigrations = ''): Promise<Banco> {
   const db = new PGlite()
   await db.exec(readFileSync(join(__dirname, 'schema_existente.sql'), 'utf8'))
   if (antesDasMigrations) await db.exec(antesDasMigrations)
+  // nos testes nao ha login de nivel 2 antes de fechar o acesso anonimo (202610070002)
+  await db.exec(`set lk.ignorar_bootstrap = 'on'`)
   await aplicarMigrations(db)
   return db
 }

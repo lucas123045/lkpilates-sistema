@@ -15,12 +15,13 @@
     "@fullcalendar/luxon3": "^6.1.21",
     "@fullcalendar/react": "^6.1.21",
     "@fullcalendar/timegrid": "^6.1.21",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.44.0",
     "luxon": "^3.7.2",
-    "next": "14.1.0",
+    "next": "14.2.35",
     "openai": "^6.38.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^20.19.43",
     "@types/react": "19.2.7",
     "typescript": "5.9.3",
     "vitest": "^2.1.9"

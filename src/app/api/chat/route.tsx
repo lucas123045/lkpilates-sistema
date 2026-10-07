@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server"
 import OpenAI from "openai"
+import { exigirNivel, respostaDeErro } from "@/lib/supabaseServidor"
 
 export async function POST(req: Request) {
 
   try {
+    // Resultados e IA: so nivel 2
+    try {
+      await exigirNivel(2)
+    } catch (e) {
+      return respostaDeErro(e)
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { erro: 'A integração de IA não está configurada.' },
@@ -61,7 +69,7 @@ ${JSON.stringify(contexto, null, 2)}
 
     return NextResponse.json(
       {
-        erro: error.message || "Erro interno"
+        erro: "Não foi possível consultar a IA agora."
       },
       {
         status: 500
