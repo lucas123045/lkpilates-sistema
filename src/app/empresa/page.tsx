@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Ban, FileSignature, MessageCircle, Pencil, Trash2 } from 'lucide-react'
+import { Ban, FileSignature, Link2, MessageCircle, Pencil, Trash2 } from 'lucide-react'
 import Modal from '@/app/components/ui/Modal'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import PageHeader from '@/app/components/shell/PageHeader'
@@ -25,6 +25,9 @@ export default function EmpresaPage() {
   const [editando, setEditando] = useState<Empresa | null>(null)
   const [editandoRegras, setEditandoRegras] = useState<Regras | null>(null)
   const [novoBloqueio, setNovoBloqueio] = useState<{ data: string; fim: string; motivo: string; credito: boolean } | null>(null)
+  const [origem, setOrigem] = useState('')
+
+  useEffect(() => setOrigem(window.location.origin), [])
 
   const carregar = useCallback(async () => {
     setErro('')
@@ -140,6 +143,26 @@ export default function EmpresaPage() {
                 <label className="ui-check"><input type="checkbox" checked={empresa.avisos_email} onChange={e => executar(() => salvarEmpresa({ avisos_email: e.target.checked }), 'Preferência salva.')} /> E-mail</label>
               </div>
               <p className="emp-vazio">Em breve: o envio automático ainda não está ativo. As preferências ficam salvas para quando for ligado.</p>
+            </div>
+
+            <div className="painel emp-card">
+              <div className="emp-card-topo">
+                <h2>Cadastro pelo link</h2>
+                <Link2 size={36} />
+              </div>
+              <div className="emp-toggles">
+                <label className="ui-check">
+                  <input
+                    type="checkbox"
+                    checked={empresa.cadastro_link_ativo}
+                    onChange={e => executar(() => salvarEmpresa({ cadastro_link_ativo: e.target.checked }), e.target.checked ? 'Link de cadastro ligado.' : 'Link de cadastro desligado.')}
+                  />
+                  Clientes podem se cadastrar pelo link
+                </label>
+              </div>
+              <p className="emp-vazio">
+                Quem preencher <strong>{origem}/cadastro</strong> entra direto como cliente ativo. Desligado, a página mostra &quot;cadastro fechado&quot;. Copie ou envie o link pela tela Clientes.
+              </p>
             </div>
 
             <div className="painel emp-card">

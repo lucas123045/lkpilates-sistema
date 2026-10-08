@@ -238,6 +238,18 @@
   flex: 1 1 140px;
 }
 
+/* titulo de grupo dentro de um formulario longo (ex.: ficha do cliente) */
+.cli-secao {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brand-blue);
+  margin: 18px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
 .ui-check {
   display: flex;
   align-items: flex-start;

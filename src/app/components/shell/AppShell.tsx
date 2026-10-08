@@ -59,7 +59,7 @@ const EXTRAS: Item[] = [
   { href: '/resultados', rotulo: 'Resultados', icone: LineChart }
 ]
 
-const SEM_MOLDURA = ['/', '/login', '/sem-acesso']
+const SEM_MOLDURA = ['/', '/login', '/sem-acesso', '/cadastro']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const caminho = usePathname() ?? '/'

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowUp, CircleDollarSign, Gift, Search, UsersRound, X } from 'lucide-react'
+import { ArrowUp, Check, CircleDollarSign, Gift, Link2, MessageCircle, Search, UserPlus, UsersRound, X } from 'lucide-react'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import PageHeader, { Kpi } from '@/app/components/shell/PageHeader'
 import { EstadoTabela } from '@/app/components/gestao/Comuns'
@@ -18,7 +18,7 @@ import {
   pagamentoAtrasado,
   situacaoVencimento
 } from '@/lib/gestao/regras'
-import { listarClientes, listarPlanos, listarProfissionais } from '@/lib/gestao/servico'
+import { carregarEmpresa, listarClientes, listarPlanos, listarProfissionais, marcarAutocadastroVisto } from '@/lib/gestao/servico'
 import type { Cliente, Plano, Profissional } from '@/lib/gestao/tipos'
 import ModalCliente from './ModalCliente'
 import '@/app/components/ui/ui.css'
@@ -51,16 +51,24 @@ function Clientes() {
   const [somenteAtrasados, setSomenteAtrasados] = useState(false)
   const [somenteAniversariantes, setSomenteAniversariantes] = useState(false)
   const [novo, setNovo] = useState<Partial<Cliente> | null>(null)
+  const [somenteNovosLink, setSomenteNovosLink] = useState(params.get('novos-link') === '1')
+  const [linkAtivo, setLinkAtivo] = useState(true)
+  const [estudio, setEstudio] = useState('LK Pilates')
+  const [origem, setOrigem] = useState('')
+
+  useEffect(() => setOrigem(window.location.origin), [])
 
   const experimentalId = params.get('experimental')
 
   const carregar = useCallback(async () => {
     setErro('')
     try {
-      const [c, p, pr] = await Promise.all([listarClientes(), listarPlanos(), listarProfissionais()])
+      const [c, p, pr, emp] = await Promise.all([listarClientes(), listarPlanos(), listarProfissionais(), carregarEmpresa()])
       setClientes(c)
       setPlanos(p)
       setProfissionais(pr)
+      setLinkAtivo(emp.cadastro_link_ativo)
+      setEstudio(emp.nome)
     } catch (e) {
       setErro(mensagemDeErro(e))
     } finally {
@@ -88,6 +96,30 @@ function Clientes() {
   const aniversariantes = ativos.filter(c => aniversarioNoMes(c.data_nascimento, hoje))
   const aniversariantesHoje = aniversariantes.filter(c => aniversarioHoje(c.data_nascimento, hoje)).length
   const novosMes = ativos.filter(c => novoNoMes(c.created_at, hoje)).length
+  const novosLink = clientes.filter(c => c.cadastrado_por === 'autocadastro' && !c.autocadastro_visto_em)
+
+  const linkCadastro = `${origem}/cadastro`
+  const mensagemWhatsapp = `Olá! Para fazer seu cadastro no ${estudio}, é só preencher este link: ${linkCadastro}`
+
+  async function copiarLink() {
+    try {
+      await navigator.clipboard.writeText(linkCadastro)
+      toast('Link de cadastro copiado.')
+    } catch {
+      toast(`Copie o link: ${linkCadastro}`)
+    }
+  }
+
+  async function marcarVistos(ids: string[]) {
+    try {
+      await marcarAutocadastroVisto(ids)
+      toast(ids.length > 1 ? 'Cadastros marcados como vistos.' : 'Cadastro marcado como visto.')
+      if (ids.length >= novosLink.length) setSomenteNovosLink(false)
+      carregar()
+    } catch (e) {
+      toast(mensagemDeErro(e), 'erro')
+    }
+  }
 
   const termo = busca.trim().toLowerCase()
   const visiveis = clientes.filter(
@@ -97,7 +129,8 @@ function Clientes() {
       (!profissional || (profissional === '__sem' ? !c.professor_id : c.professor_id === profissional)) &&
       (!etiqueta || (c.etiquetas ?? []).includes(etiqueta)) &&
       (!somenteAtrasados || pagamentoAtrasado(c, hoje)) &&
-      (!somenteAniversariantes || aniversarioNoMes(c.data_nascimento, hoje))
+      (!somenteAniversariantes || aniversarioNoMes(c.data_nascimento, hoje)) &&
+      (!somenteNovosLink || (c.cadastrado_por === 'autocadastro' && !c.autocadastro_visto_em))
   )
   if (somenteAniversariantes) visiveis.sort((a, b) => (a.data_nascimento ?? '').slice(8).localeCompare((b.data_nascimento ?? '').slice(8)))
 
@@ -105,7 +138,17 @@ function Clientes() {
     <>
       <PageHeader
         trilha={[{ rotulo: 'Clientes' }, { rotulo: 'Listagem de Clientes' }]}
-        acao={<button className="btn" onClick={() => setNovo({})}>Novo Cliente</button>}
+        acao={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn" onClick={copiarLink} title={linkAtivo ? 'Link para o cliente se cadastrar sozinho' : 'O link está desativado em Minha Empresa'}>
+              <Link2 size={15} /> Copiar link de cadastro
+            </button>
+            <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(mensagemWhatsapp)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+              <MessageCircle size={15} /> Enviar por WhatsApp
+            </a>
+            <button className="btn" onClick={() => setNovo({})}>Novo Cliente</button>
+          </div>
+        }
         cards={
           <>
             <Kpi titulo="Pag. atrasados" valor={atrasados} icone={<CircleDollarSign size={26} />} tom="vermelho">
@@ -136,9 +179,25 @@ function Clientes() {
       />
 
       <div className="ph-corpo">
+        {!linkAtivo && (
+          <div className="ui-alerta ui-alerta-aviso" style={{ marginBottom: 16 }}>
+            O link de cadastro está desativado: quem abrir verá &quot;cadastro fechado&quot;. Para ligar, vá em Minha Empresa.
+          </div>
+        )}
+        {novosLink.length > 0 && !somenteNovosLink && (
+          <div className="ui-alerta ui-alerta-info" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <UserPlus size={18} />
+            <span style={{ flex: 1 }}>
+              <strong>{novosLink.length} {novosLink.length === 1 ? 'novo cadastro' : 'novos cadastros'} pelo link.</strong> Complete plano, profissional e pacote de aulas.
+            </span>
+            <button className="btn btn-sec btn-sm" onClick={() => { setSomenteNovosLink(true); setSomenteAtrasados(false); setSomenteAniversariantes(false); setStatus('todos') }}>
+              Ver lista
+            </button>
+          </div>
+        )}
         <div className="painel">
           <div className="painel-topo">
-            <h2>Clientes {somenteAtrasados && '· pagamentos atrasados'}{somenteAniversariantes && '· aniversariantes do mês'}</h2>
+            <h2>Clientes {somenteAtrasados && '· pagamentos atrasados'}{somenteAniversariantes && '· aniversariantes do mês'}{somenteNovosLink && '· novos cadastros pelo link'}</h2>
             <div className="painel-filtros">
               <div className="busca">
                 <Search size={16} />
@@ -158,8 +217,13 @@ function Clientes() {
                 <option value="inativos">Somente inativos</option>
                 <option value="todos">Todos</option>
               </select>
-              {(busca || profissional || etiqueta || somenteAtrasados || somenteAniversariantes) && (
-                <button className="btn btn-sec" onClick={() => { setBusca(''); setProfissional(''); setEtiqueta(''); setSomenteAtrasados(false); setSomenteAniversariantes(false) }}>
+              {somenteNovosLink && novosLink.length > 0 && (
+                <button className="btn btn-sec" onClick={() => marcarVistos(novosLink.map(c => c.id))}>
+                  <Check size={14} /> Marcar todos como vistos
+                </button>
+              )}
+              {(busca || profissional || etiqueta || somenteAtrasados || somenteAniversariantes || somenteNovosLink) && (
+                <button className="btn btn-sec" onClick={() => { setBusca(''); setProfissional(''); setEtiqueta(''); setSomenteAtrasados(false); setSomenteAniversariantes(false); setSomenteNovosLink(false) }}>
                   <X size={14} /> Limpar
                 </button>
               )}
@@ -228,7 +292,15 @@ function Clientes() {
                               )}
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>{c.telefone}</td>
-                            <td className="centro">{formatarAniversario(c.data_nascimento)}</td>
+                            <td className="centro">
+                              {somenteNovosLink ? (
+                                <button className="btn btn-sec btn-sm" onClick={e => { e.stopPropagation(); marcarVistos([c.id]) }} title="Tira do aviso de novos cadastros">
+                                  <Check size={13} /> Visto
+                                </button>
+                              ) : (
+                                formatarAniversario(c.data_nascimento)
+                              )}
+                            </td>
                           </tr>
                         )
                       })}

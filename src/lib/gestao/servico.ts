@@ -3,6 +3,7 @@
 
 import { supabase } from '../supabase'
 import { falhar, rpc } from '../agenda/servico'
+import { somenteDigitos } from '../cadastro'
 import type { Agendamento, Credito } from '../agenda/tipos'
 import type { CategoriaDespesa, Cliente, Despesa, Empresa, FormaPagamento, Pagamento, Plano, Profissional, Servico } from './tipos'
 
@@ -62,8 +63,9 @@ export function salvarPlano(p: Partial<Plano> & Pick<Plano, 'nome' | 'periodicid
 
 /* ======================= Clientes ======================= */
 
+// string unica: o supabase-js tipa o resultado a partir do texto do select
 const CAMPOS_CLIENTE =
-  'id, nome, ativo, created_at, plano, plano_id, vencimento, data_nascimento, etiquetas, observacoes, telefone, professor_id, frequencia_semanal, total_aulas, aulas_restantes, valor_plano, pagou_em'
+  'id, nome, ativo, created_at, plano, plano_id, vencimento, data_nascimento, etiquetas, observacoes, telefone, professor_id, frequencia_semanal, total_aulas, aulas_restantes, valor_plano, pagou_em, cpf, email, cep, logradouro, numero, complemento, bairro, cidade, uf, profissao, como_conheceu, objetivo, saude, aceite_lgpd_em, cadastrado_por, autocadastro_visto_em'
 
 export function listarClientes() {
   return lista<Cliente>(supabase.from('alunos').select(CAMPOS_CLIENTE).order('nome'))
@@ -75,7 +77,15 @@ export async function carregarCliente(id: string): Promise<Cliente | null> {
   return data as Cliente | null
 }
 
-export type DadosCliente = Partial<Omit<Cliente, 'id' | 'created_at'>> & { nome: string }
+export type DadosCliente = Partial<Omit<Cliente, 'id' | 'created_at' | 'aceite_lgpd_em' | 'cadastrado_por'>> & { nome: string }
+
+const textoOuNulo = (v: string | null | undefined) => v?.trim() || null
+
+function falharCliente(error: { message: string; code?: string }): never {
+  if (error.code === '23505' && error.message.includes('cpf')) throw new Error('Já existe um cliente com este CPF.')
+  if (error.code === '23514' && error.message.includes('cpf')) throw new Error('CPF inválido: use os 11 números.')
+  falhar(error)
+}
 
 export async function salvarCliente(id: string | null, c: DadosCliente): Promise<string> {
   const dados = {
@@ -85,10 +95,19 @@ export async function salvarCliente(id: string | null, c: DadosCliente): Promise
     vencimento: c.vencimento || null,
     data_nascimento: c.data_nascimento || null,
     observacoes: c.observacoes?.trim() || null,
+    ...('cpf' in c ? { cpf: somenteDigitos(c.cpf) || null } : {}),
+    ...('cep' in c ? { cep: somenteDigitos(c.cep) || null } : {}),
+    ...('email' in c ? { email: c.email?.trim().toLowerCase() || null } : {}),
+    ...Object.fromEntries(
+      (['logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'profissao', 'como_conheceu', 'objetivo', 'saude'] as const)
+        .filter(k => k in c)
+        .map(k => [k, textoOuNulo(c[k])])
+    ),
     etiquetas: (c.etiquetas ?? []).map(e => e.trim()).filter(Boolean)
   }
   if (id) {
-    await executar(supabase.from('alunos').update(dados).eq('id', id))
+    const { error } = await supabase.from('alunos').update(dados).eq('id', id)
+    if (error) falharCliente(error)
     return id
   }
   const { data, error } = await supabase
@@ -96,8 +115,23 @@ export async function salvarCliente(id: string | null, c: DadosCliente): Promise
     .insert({ total_aulas: 0, aulas_restantes: 0, ativo: true, ...dados })
     .select('id')
     .single()
-  if (error) falhar(error)
+  if (error) falharCliente(error)
   return data.id as string
+}
+
+/** Autocadastros pelo link ainda nao conferidos pelo estudio. */
+export async function contarNovosAutocadastros(): Promise<number> {
+  const { count, error } = await supabase
+    .from('alunos')
+    .select('id', { count: 'exact', head: true })
+    .eq('cadastrado_por', 'autocadastro')
+    .is('autocadastro_visto_em', null)
+  if (error) falhar(error)
+  return count ?? 0
+}
+
+export function marcarAutocadastroVisto(ids: string[]) {
+  return executar(supabase.from('alunos').update({ autocadastro_visto_em: agora() }).in('id', ids))
 }
 
 export function historicoAulasCliente(id: string, limite = 80) {

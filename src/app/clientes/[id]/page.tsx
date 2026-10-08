@@ -10,6 +10,7 @@ import ModalPagamento from '@/app/components/gestao/ModalPagamento'
 import { DIAS_SEMANA_CURTO, formatarData, formatarDataLonga, formatarHora, hojeEstudio } from '@/lib/agenda/datas'
 import { ROTULO_STATUS, situacaoCredito } from '@/lib/agenda/regras'
 import type { Agendamento, Credito } from '@/lib/agenda/tipos'
+import { enderecoEmLinha, formatarCpf } from '@/lib/cadastro'
 import { formatarAniversario, formatarMoeda, inicial, ROTULO_FORMA, situacaoVencimento } from '@/lib/gestao/regras'
 import {
   carregarCliente,
@@ -175,13 +176,26 @@ export default function ClienteDetalhe() {
           {aba === 'dados' && (
             <div className="ficha">
               <Campo rotulo="Telefone">{cliente.telefone || '—'}</Campo>
+              <Campo rotulo="E-mail">{cliente.email || '—'}</Campo>
+              <Campo rotulo="CPF">{cliente.cpf ? formatarCpf(cliente.cpf) : '—'}</Campo>
+              <Campo rotulo="Endereço">{enderecoEmLinha(cliente) || '—'}</Campo>
+              <Campo rotulo="Profissão">{cliente.profissao || '—'}</Campo>
               <Campo rotulo="Aniversário">{cliente.data_nascimento ? `${formatarAniversario(cliente.data_nascimento)} (${formatarData(cliente.data_nascimento)})` : '—'}</Campo>
               <Campo rotulo="Etiquetas">
                 {cliente.etiquetas?.length ? cliente.etiquetas.map(t => <span key={t} className="etiqueta tag">{t}</span>) : '—'}
               </Campo>
               <Campo rotulo="Cliente desde">{formatarData(cliente.created_at.slice(0, 10))}</Campo>
               <Campo rotulo="Presenças registradas">{presentes} presença(s) · {faltas} falta(s)</Campo>
+              <Campo rotulo="Objetivo">{cliente.objetivo || '—'}</Campo>
+              <Campo rotulo="Saúde">{cliente.saude || '—'}</Campo>
               <Campo rotulo="Observações">{cliente.observacoes || '—'}</Campo>
+              <Campo rotulo="Como conheceu">{cliente.como_conheceu || '—'}</Campo>
+              {cliente.cadastrado_por === 'autocadastro' && (
+                <Campo rotulo="Cadastro">
+                  Feito pelo próprio cliente, pelo link
+                  {cliente.aceite_lgpd_em && ` · autorizou o uso dos dados em ${formatarData(cliente.aceite_lgpd_em.slice(0, 10))}`}
+                </Campo>
+              )}
             </div>
           )}
 

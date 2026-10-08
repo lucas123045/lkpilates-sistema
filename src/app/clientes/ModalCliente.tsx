@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import Modal from '@/app/components/ui/Modal'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import { frequenciaDoPlano } from '@/lib/agenda/regras'
+import { buscarCep, COMO_CONHECEU, cpfValido, emailValido, formatarCep, formatarCpf, formatarTelefone, UFS } from '@/lib/cadastro'
 import { salvarCliente, type DadosCliente } from '@/lib/gestao/servico'
 import type { Cliente, Plano, Profissional } from '@/lib/gestao/tipos'
 
@@ -20,7 +21,7 @@ type Props = {
 export default function ModalCliente({ cliente, planos, profissionais, sugestoesEtiquetas, onFechar, onSalvo }: Props) {
   const { toast } = useFeedback()
   const novo = !cliente?.id
-  const [c, setC] = useState<Partial<Cliente>>({ ativo: true, etiquetas: [], ...cliente })
+  const [c, setC] = useState<Partial<Cliente>>({ ativo: true, etiquetas: [], ...cliente, cpf: formatarCpf(cliente?.cpf), cep: formatarCep(cliente?.cep) })
   const [etiqueta, setEtiqueta] = useState('')
   const [pacote, setPacote] = useState<number | ''>('')
   const [salvando, setSalvando] = useState(false)
@@ -33,7 +34,17 @@ export default function ModalCliente({ cliente, planos, profissionais, sugestoes
     setEtiqueta('')
   }
 
+  async function aoMudarCep(valor: string) {
+    const cep = formatarCep(valor)
+    set('cep', cep)
+    if (cep.replace(/D/g, '').length !== 8) return
+    const end = await buscarCep(cep)
+    if (end) setC(x => ({ ...x, logradouro: end.logradouro || x.logradouro, bairro: end.bairro || x.bairro, cidade: end.cidade || x.cidade, uf: end.uf || x.uf }))
+  }
+
   async function salvar() {
+    if (c.cpf && !cpfValido(c.cpf)) return toast('CPF inválido.', 'erro')
+    if (c.email?.trim() && !emailValido(c.email)) return toast('E-mail inválido.', 'erro')
     setSalvando(true)
     try {
       const plano = planos.find(p => p.id === c.plano_id)
@@ -50,6 +61,21 @@ export default function ModalCliente({ cliente, planos, profissionais, sugestoes
         vencimento: c.vencimento ?? null,
         etiquetas: etiqueta.trim() ? [...(c.etiquetas ?? []), etiqueta.trim()] : c.etiquetas ?? [],
         observacoes: c.observacoes ?? null,
+        cpf: c.cpf ?? null,
+        email: c.email ?? null,
+        cep: c.cep ?? null,
+        logradouro: c.logradouro ?? null,
+        numero: c.numero ?? null,
+        complemento: c.complemento ?? null,
+        bairro: c.bairro ?? null,
+        cidade: c.cidade ?? null,
+        uf: c.uf ?? null,
+        profissao: c.profissao ?? null,
+        como_conheceu: c.como_conheceu ?? null,
+        objetivo: c.objetivo ?? null,
+        saude: c.saude ?? null,
+        // completou o cadastro feito pelo link: sai do aviso de "novos cadastros"
+        ...(c.cadastrado_por === 'autocadastro' && !c.autocadastro_visto_em ? { autocadastro_visto_em: new Date().toISOString() } : {}),
         ativo: c.ativo ?? true
       }
       if (novo && pacote !== '') {
@@ -88,11 +114,21 @@ export default function ModalCliente({ cliente, planos, profissionais, sugestoes
       <div className="ui-linha">
         <div className="ui-campo">
           <label className="label">Telefone / WhatsApp</label>
-          <input className="input" inputMode="tel" value={c.telefone ?? ''} onChange={e => set('telefone', e.target.value)} placeholder="(11) 99999-0000" />
+          <input className="input" inputMode="tel" value={c.telefone ?? ''} onChange={e => set('telefone', formatarTelefone(e.target.value))} placeholder="(31) 99999-0000" />
         </div>
         <div className="ui-campo">
           <label className="label">Aniversário (nascimento)</label>
           <input className="input" type="date" value={c.data_nascimento ?? ''} onChange={e => set('data_nascimento', e.target.value)} />
+        </div>
+      </div>
+      <div className="ui-linha">
+        <div className="ui-campo">
+          <label className="label">CPF</label>
+          <input className="input" inputMode="numeric" value={c.cpf ?? ''} onChange={e => set('cpf', formatarCpf(e.target.value))} placeholder="000.000.000-00" />
+        </div>
+        <div className="ui-campo">
+          <label className="label">E-mail</label>
+          <input className="input" type="email" value={c.email ?? ''} onChange={e => set('email', e.target.value)} />
         </div>
       </div>
       <div className="ui-linha">
@@ -163,6 +199,68 @@ export default function ModalCliente({ cliente, planos, profissionais, sugestoes
         <label className="label">Observações</label>
         <textarea className="ui-textarea" value={c.observacoes ?? ''} onChange={e => set('observacoes', e.target.value)} placeholder="Restrições, histórico de lesões, preferências..." />
       </div>
+      <h3 className="cli-secao">Endereço</h3>
+      <div className="ui-linha">
+        <div className="ui-campo">
+          <label className="label">CEP</label>
+          <input className="input" inputMode="numeric" value={c.cep ?? ''} onChange={e => aoMudarCep(e.target.value)} placeholder="00000-000" />
+        </div>
+        <div className="ui-campo">
+          <label className="label">Número</label>
+          <input className="input" value={c.numero ?? ''} onChange={e => set('numero', e.target.value)} />
+        </div>
+      </div>
+      <div className="ui-campo">
+        <label className="label">Rua</label>
+        <input className="input" value={c.logradouro ?? ''} onChange={e => set('logradouro', e.target.value)} />
+      </div>
+      <div className="ui-linha">
+        <div className="ui-campo">
+          <label className="label">Complemento</label>
+          <input className="input" value={c.complemento ?? ''} onChange={e => set('complemento', e.target.value)} />
+        </div>
+        <div className="ui-campo">
+          <label className="label">Bairro</label>
+          <input className="input" value={c.bairro ?? ''} onChange={e => set('bairro', e.target.value)} />
+        </div>
+      </div>
+      <div className="ui-linha">
+        <div className="ui-campo">
+          <label className="label">Cidade</label>
+          <input className="input" value={c.cidade ?? ''} onChange={e => set('cidade', e.target.value)} />
+        </div>
+        <div className="ui-campo">
+          <label className="label">Estado</label>
+          <select className="ui-select" value={c.uf ?? ''} onChange={e => set('uf', e.target.value || null)}>
+            <option value="">UF</option>
+            {UFS.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <h3 className="cli-secao">Sobre o cliente</h3>
+      <div className="ui-linha">
+        <div className="ui-campo">
+          <label className="label">Profissão</label>
+          <input className="input" value={c.profissao ?? ''} onChange={e => set('profissao', e.target.value)} />
+        </div>
+        <div className="ui-campo">
+          <label className="label">Como conheceu</label>
+          <select className="ui-select" value={c.como_conheceu ?? ''} onChange={e => set('como_conheceu', e.target.value || null)}>
+            <option value="">—</option>
+            {[...COMO_CONHECEU, ...(c.como_conheceu && !COMO_CONHECEU.includes(c.como_conheceu) ? [c.como_conheceu] : [])].map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="ui-campo">
+        <label className="label">Objetivo com o pilates</label>
+        <textarea className="ui-textarea" value={c.objetivo ?? ''} onChange={e => set('objetivo', e.target.value)} />
+      </div>
+      <div className="ui-campo">
+        <label className="label">Saúde (lesões, cirurgias, dores, gestação, restrições)</label>
+        <textarea className="ui-textarea" value={c.saude ?? ''} onChange={e => set('saude', e.target.value)} />
+      </div>
+
       {!novo && (
         <label className="ui-check">
           <input type="checkbox" checked={c.ativo ?? true} onChange={e => set('ativo', e.target.checked)} />

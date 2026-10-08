@@ -1,0 +1,153 @@
+/* ==========================================================================
+   AUTOCADASTRO (pagina publica, pensada para celular)
+   ========================================================================== */
+
+.cad {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.cad-topo {
+  background: linear-gradient(150deg, var(--brand-blue-dark) 0%, var(--brand-blue) 55%, var(--brand-blue-light) 100%);
+  color: #fff;
+  text-align: center;
+  padding: 32px 20px 64px;
+}
+
+.cad-topo img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 50%;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+
+.cad-topo h1 {
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.cad-topo p {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cad-corpo {
+  max-width: 560px;
+  margin: -40px auto 0;
+  padding: 0 16px 40px;
+}
+
+.cad-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 18px;
+  margin-bottom: 16px;
+}
+
+.cad-card h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin-bottom: 14px;
+}
+
+.cad-linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.cad-linha.estreita {
+  grid-template-columns: 2fr 1fr;
+}
+
+.cad-campo .input,
+.cad-campo .ui-select,
+.cad-campo .ui-textarea {
+  font-size: 16px; /* evita o zoom automatico do iPhone */
+  margin-bottom: 4px;
+}
+
+.cad-campo {
+  margin-bottom: 12px;
+}
+
+.cad-campo .ui-select {
+  width: 100%;
+}
+
+.cad-erro-campo {
+  font-size: 12.5px;
+  color: var(--state-danger-dark);
+}
+
+.cad-campo.com-erro .input,
+.cad-campo.com-erro .ui-select {
+  border-color: var(--state-danger-dark);
+}
+
+.cad-dica {
+  font-size: 12.5px;
+  color: var(--ink-500);
+}
+
+.cad-aceite {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--ink-700);
+  line-height: 1.45;
+}
+
+.cad-aceite input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.cad-enviar {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+}
+
+.cad-isca {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.cad-mensagem {
+  text-align: center;
+  padding: 32px 22px;
+}
+
+.cad-mensagem svg {
+  margin-bottom: 10px;
+}
+
+.cad-mensagem h2 {
+  margin-bottom: 8px;
+}
+
+.cad-mensagem p {
+  color: var(--ink-500);
+}
+
+@media (max-width: 420px) {
+  .cad-linha,
+  .cad-linha.estreita {
+    grid-template-columns: 1fr;
+  }
+}

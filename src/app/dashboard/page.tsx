@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardCheck, ClipboardList, LineChart, Receipt, ShieldCheck, Tag, UserRound, UsersRound } from 'lucide-react'
+import { ArrowRight, BarChart3, Building2, CalendarCheck, CalendarDays, CircleDollarSign, ClipboardCheck, ClipboardList, LineChart, Receipt, ShieldCheck, Tag, UserPlus, UserRound, UsersRound } from 'lucide-react'
 import PageHeader from '@/app/components/shell/PageHeader'
 import { podeAcessar, useUsuario } from '@/app/components/shell/Usuario'
+import { contarNovosAutocadastros } from '@/lib/gestao/servico'
 
 const ATALHOS = [
   { href: '/agenda', rotulo: 'Agenda', icone: CalendarDays },
@@ -22,6 +24,12 @@ const ATALHOS = [
 
 export default function Dashboard() {
   const usuario = useUsuario()
+  const [novosLink, setNovosLink] = useState(0)
+
+  useEffect(() => {
+    contarNovosAutocadastros().then(setNovosLink).catch(() => {})
+  }, [])
+
   return (
     <>
       <PageHeader trilha={[{ rotulo: 'Início' }]} />
@@ -31,6 +39,15 @@ export default function Dashboard() {
           <p className="dashboard-subtitle">
             Gerenciamento completo do estúdio <b>{usuario.estudio}</b>
           </p>
+          {novosLink > 0 && (
+            <Link href="/clientes?novos-link=1" className="ui-alerta ui-alerta-info" style={{ marginBottom: 16, alignItems: 'center', textDecoration: 'none' }}>
+              <UserPlus size={18} />
+              <span style={{ flex: 1 }}>
+                <strong>{novosLink} {novosLink === 1 ? 'novo cadastro' : 'novos cadastros'} pelo link.</strong> Complete plano, profissional e pacote de aulas.
+              </span>
+              <ArrowRight size={18} />
+            </Link>
+          )}
           <Link href="/relatorio-alunos" className="dash-destaque">
             <span className="dash-destaque-icone"><ClipboardCheck size={30} /></span>
             <span className="dash-destaque-texto">

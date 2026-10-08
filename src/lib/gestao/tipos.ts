@@ -44,6 +44,24 @@ export type Cliente = {
   aulas_restantes: number
   valor_plano: number | null
   pagou_em: string | null
+  cpf: string | null
+  email: string | null
+  cep: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
+  profissao: string | null
+  como_conheceu: string | null
+  objetivo: string | null
+  saude: string | null
+  /** preenchido no autocadastro (aceite da LGPD) */
+  aceite_lgpd_em: string | null
+  cadastrado_por: 'estudio' | 'autocadastro'
+  /** autocadastro ja conferido pelo estudio (sai do aviso de novos) */
+  autocadastro_visto_em: string | null
 }
 
 export type FormaPagamento = 'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'transferencia'
@@ -82,4 +100,5 @@ export type Empresa = {
   avisos_whatsapp: boolean
   avisos_email: boolean
   avisos_dias_antes: number
+  cadastro_link_ativo: boolean
 }
