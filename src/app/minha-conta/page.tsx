@@ -8,7 +8,7 @@ import { ROTULO_NIVEL } from '@/lib/acesso'
 import { trocarMinhaSenha } from '@/lib/usuarios'
 import '@/app/components/ui/ui.css'
 
-const SENHA_MINIMA = 8
+const SENHA_MINIMA = 6
 
 export default function MinhaConta() {
   const { toast } = useFeedback()

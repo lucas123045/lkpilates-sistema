@@ -1,7 +1,7 @@
 import { ErroAcesso } from '@/lib/supabaseServidor'
 import type { Nivel } from '@/lib/acesso'
 
-export const SENHA_MINIMA = 8
+export const SENHA_MINIMA = 6
 
 export function validarNome(v: unknown) {
   const nome = typeof v === 'string' ? v.trim() : ''

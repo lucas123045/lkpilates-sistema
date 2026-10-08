@@ -13,7 +13,7 @@ import type { Profissional } from '@/lib/gestao/tipos'
 import { alterarUsuario, criarUsuario, listarUsuarios, type UsuarioSistema } from '@/lib/usuarios'
 import '@/app/components/ui/ui.css'
 
-const SENHA_MINIMA = 8
+const SENHA_MINIMA = 6
 
 export default function UsuariosPage() {
   const { toast, confirmar } = useFeedback()
