@@ -13,7 +13,9 @@ import { hojeEstudio } from '@/lib/agenda/datas'
 /** O link esta aberto? (e o nome do estudio para o cabecalho) */
 export async function GET() {
   try {
-    const { data } = await supabaseAdmin().from('empresa').select('nome, cadastro_link_ativo').eq('id', 1).maybeSingle()
+    const { data, error } = await supabaseAdmin().from('empresa').select('nome, cadastro_link_ativo').eq('id', 1).maybeSingle()
+    // ex.: migration 202610080001 nao aplicada (coluna cadastro_link_ativo inexistente)
+    if (error) throw new Error(`autocadastro: ${error.message}`)
     return NextResponse.json({ aberto: !!data?.cadastro_link_ativo, estudio: data?.nome ?? 'LK Pilates' })
   } catch (e) {
     return respostaDeErro(e)

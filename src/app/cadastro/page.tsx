@@ -17,7 +17,7 @@ import { hojeEstudio } from '@/lib/agenda/datas'
 import '@/app/components/ui/ui.css'
 import './cadastro.css'
 
-type Tela = 'carregando' | 'formulario' | 'fechado' | 'sucesso' | 'ja_cadastrado'
+type Tela = 'carregando' | 'formulario' | 'fechado' | 'indisponivel' | 'sucesso' | 'ja_cadastrado'
 type Erros = Partial<Record<keyof EntradaCadastro, string>>
 
 /** Pagina publica: o cliente preenche os proprios dados e ja entra como cliente ativo. */
@@ -33,12 +33,14 @@ export default function Cadastro() {
 
   useEffect(() => {
     fetch('/api/cadastro')
-      .then(r => r.json())
-      .then(j => {
+      .then(async r => {
+        const j = await r.json().catch(() => ({}))
+        // erro do servidor nao e "fechado": mostra que esta indisponivel
+        if (!r.ok) return setTela('indisponivel')
         if (j.estudio) setEstudio(j.estudio)
         setTela(j.aberto ? 'formulario' : 'fechado')
       })
-      .catch(() => setTela('formulario'))
+      .catch(() => setTela('indisponivel'))
   }, [])
 
   const set = <K extends keyof EntradaCadastro>(k: K, v: EntradaCadastro[K]) => {
@@ -117,6 +119,14 @@ export default function Cadastro() {
             <Lock size={32} color="var(--ink-500)" />
             <h2>Cadastro fechado</h2>
             <p>O cadastro pelo link não está disponível no momento. Fale com o estúdio.</p>
+          </div>
+        )}
+
+        {tela === 'indisponivel' && (
+          <div className="cad-card cad-mensagem">
+            <Lock size={32} color="var(--ink-500)" />
+            <h2>Cadastro indisponível</h2>
+            <p>Não foi possível abrir o cadastro agora. Tente de novo em alguns minutos ou fale com o estúdio.</p>
           </div>
         )}
 
