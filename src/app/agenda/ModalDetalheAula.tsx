@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, CircleDollarSign, CircleSlash, Pencil, Repeat, RotateCcw, Trash2, UserPlus, X } from 'lucide-react'
+import { Check, CircleDollarSign, CircleSlash, Pencil, RefreshCw, Repeat, RotateCcw, Trash2, UserPlus, X } from 'lucide-react'
 import Modal from '@/app/components/ui/Modal'
 import { useUsuario } from '@/app/components/shell/Usuario'
 import { mensagemDeErro, useFeedback } from '@/app/components/ui/Feedback'
 import { DIAS_SEMANA_CURTO, formatarData, formatarDataLonga, formatarHora, hojeEstudio, horaFim } from '@/lib/agenda/datas'
 import { calcularDesmarcacao, ROTULO_STATUS } from '@/lib/agenda/regras'
-import { carregarRecorrencia, desmarcar, excluirAulaCliente, marcarStatus, type EscopoAula } from '@/lib/agenda/servico'
+import { carregarRecorrencia, desmarcar, excluirAulaCliente, marcarReposicao, marcarStatus, type EscopoAula } from '@/lib/agenda/servico'
 import type { Agendamento, ConfiguracaoEstudio, Modalidade, Professor } from '@/lib/agenda/tipos'
 
 /** Pergunta "Somente esta aula" / "Esta e as próximas". */
@@ -100,6 +100,10 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
   const atrasado = !!a.aluno?.vencimento && a.aluno.vencimento < hoje
   const previa = calcularDesmarcacao(a, Number(configuracao.antecedencia_desmarcacao_horas), undefined, concederCredito ? true : undefined)
   const podeCredito = a.tipo !== 'experimental' && a.tipo !== 'avulsa'
+  const ehReposicao = a.tipo === 'reposicao' || (a.status === 'presente' && a.registro_status === 'reposicao')
+  // reposicao debita o pacote como presenca; nao vale para experimental/avulsa
+  // (aula ja agendada como reposicao, com credito: o "Presente" ja registra como reposicao)
+  const podeReposicao = !!a.aluno_id && podeCredito && a.tipo !== 'reposicao' && (a.status === 'agendado' || a.status === 'falta' || (a.status === 'presente' && !ehReposicao))
 
   async function acao(fn: () => Promise<unknown>, msg: string, desfazer?: () => Promise<unknown>) {
     setSalvando(true)
@@ -158,7 +162,7 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
       <div className="pe-linha" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
         <span className={`ui-chip ${COR_STATUS[a.status]}`}>{ROTULO_STATUS[a.status]}</span>
         {a.tipo === 'experimental' && <span className="ui-chip ui-chip-roxo">Não cadastrado / experimental</span>}
-        {a.tipo === 'reposicao' && <span className="ui-chip ui-chip-laranja">Reposição</span>}
+        {ehReposicao && <span className="ui-chip ui-chip-laranja">Reposição</span>}
         {atrasado && (
           <span className="ui-chip ui-chip-vermelho"><CircleDollarSign size={12} /> Pagamento atrasado ({formatarData(a.aluno!.vencimento!)})</span>
         )}
@@ -203,6 +207,11 @@ export default function ModalDetalheAula({ agendamento: a, professor, servico, c
           {(a.status === 'agendado' || a.status === 'falta') && (
             <button className="btn btn-veio" disabled={salvando} onClick={() => acao(() => marcarStatus(a.id, 'presente'), `${nome}: presente.`, voltar)}>
               <Check size={15} /> Presente
+            </button>
+          )}
+          {podeReposicao && (
+            <button className="btn btn-reposicao" disabled={salvando} onClick={() => acao(() => marcarReposicao(a.id), `${nome}: reposição.`, voltar)}>
+              <RefreshCw size={15} /> Reposição
             </button>
           )}
           {(a.status === 'agendado' || a.status === 'presente') && (

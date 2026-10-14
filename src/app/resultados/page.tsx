@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseDaRequisicao } from '@/lib/supabaseServidor'
 import ResultadosDashboard from './ResultadosDashboard'
 import { EstadoErro } from './components/EstadoVazio'
 import type { Aluno } from './lib/types'
@@ -13,6 +13,9 @@ function ehContaDeTeste(nome: string) {
 }
 
 export default async function ResultadosPage() {
+  // Roda no servidor: usa a sessao (cookies) de quem esta logado. O cliente do
+  // navegador aqui chegaria ao banco como anonimo, e o acesso anonimo e fechado.
+  const supabase = supabaseDaRequisicao()
   const { data, error } = await supabase
     .from('alunos')
     .select(

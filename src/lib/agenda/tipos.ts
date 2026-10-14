@@ -81,6 +81,8 @@ export type Agendamento = {
   excecao?: boolean
   excluida?: boolean
   aluno?: AlunoResumo | null
+  /** como a presenca foi registrada em aulas (ex.: 'reposicao' = amarelo); so na leitura do periodo */
+  registro_status?: 'veio' | 'faltou' | 'reposicao' | null
 }
 
 export type Bloqueio = {

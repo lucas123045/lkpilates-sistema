@@ -42,6 +42,8 @@ const COR_STATUS: Record<string, string> = {
   desmarcado: '#6b7280',
   cancelado_estudio: '#6b7280'
 }
+// presenca registrada como reposicao: amarelo, como no Relatorio de alunos
+const COR_REPOSICAO = '#facc15'
 
 const DATA_VALIDA = /^\d{4}-\d{2}-\d{2}$/
 
@@ -60,6 +62,7 @@ function corDoTexto(fundo: string) {
 
 function corDoCard(a: Agendamento, corProfissional: string | undefined) {
   if (a.status === 'agendado') return a.cor ?? corProfissional ?? COR_AGENDADA_PADRAO
+  if (a.status === 'presente' && a.registro_status === 'reposicao') return COR_REPOSICAO
   return COR_STATUS[a.status] ?? COR_AGENDADA_PADRAO
 }
 
@@ -312,6 +315,7 @@ function Agenda() {
               <span className="agm-legenda-status">
                 <i style={{ background: 'conic-gradient(#1f4fd8, #9333ea, #ea580c, #db2777, #1f4fd8)' }} /> Agendada (cor escolhida)
                 <i style={{ background: COR_STATUS.presente }} /> Presente
+                <i style={{ background: COR_REPOSICAO }} /> Reposição
                 <i style={{ background: COR_STATUS.falta }} /> Falta
                 <i style={{ background: COR_STATUS.desmarcado }} /> Desmarcada
               </span>
@@ -381,7 +385,7 @@ function Agenda() {
                       const faixa = prof?.cor && prof.cor.toLowerCase() !== fundo.toLowerCase() ? prof.cor : 'rgba(0, 0, 0, 0.28)'
                       return { ['--faixa' as string]: faixa, color: corDoTexto(fundo) }
                     })()}
-                    title={`${nome} · ${formatarHora(a.hora)}–${horaFim(a.hora, a.duracao_min)}${prof ? ` · ${prof.nome}` : ''}${serv ? ` · ${serv.nome}` : ''} · ${ROTULO_STATUS[a.status]}${atrasado ? ' · pagamento atrasado' : ''}`}
+                    title={`${nome} · ${formatarHora(a.hora)}–${horaFim(a.hora, a.duracao_min)}${prof ? ` · ${prof.nome}` : ''}${serv ? ` · ${serv.nome}` : ''} · ${ROTULO_STATUS[a.status]}${a.registro_status === 'reposicao' ? ' (reposição)' : ''}${atrasado ? ' · pagamento atrasado' : ''}`}
                   >
                     <span className="agm-hora">
                       {formatarHora(a.hora).replace(/^0/, '')}

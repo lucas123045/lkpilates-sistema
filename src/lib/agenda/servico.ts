@@ -106,11 +106,21 @@ export async function carregarPeriodo(inicio: string, fim: string): Promise<Dado
     if (r.error) falhar(r.error)
   }
 
+  // como cada presenca foi registrada (reposicao aparece em amarelo, como no Relatorio de alunos)
+  const lista = (agendamentos.data ?? []) as Agendamento[]
+  const aulaIds = lista.map(a => a.aula_id).filter((id): id is number => id != null)
+  if (aulaIds.length) {
+    const { data: regs, error } = await supabase.from('aulas').select('id, status').in('id', aulaIds)
+    if (error) falhar(error)
+    const statusPorAula = new Map((regs ?? []).map(r => [r.id as number, r.status as Agendamento['registro_status']]))
+    for (const a of lista) a.registro_status = a.aula_id != null ? statusPorAula.get(a.aula_id) ?? null : null
+  }
+
   return {
     inicio,
     fim,
     horarios: (horarios.data ?? []) as Horario[],
-    agendamentos: (agendamentos.data ?? []) as Agendamento[],
+    agendamentos: lista,
     professores: (professores.data ?? []) as Professor[],
     modalidades: (modalidades.data ?? []) as Modalidade[],
     bloqueios: (bloqueios.data ?? []) as Bloqueio[],
@@ -162,6 +172,11 @@ export function marcarStatus(agendamentoId: string, status: Extract<StatusAgenda
     status_input: status,
     observacao_input: observacao ?? null
   })
+}
+
+/** Presenca registrada como reposicao (debita o pacote igual; aparece em amarelo). */
+export function marcarReposicao(agendamentoId: string) {
+  return rpc<Agendamento>('marcar_reposicao', { agenda_id_input: agendamentoId })
 }
 
 export function marcarTodosPresentes(horarioId: string, data: string) {
